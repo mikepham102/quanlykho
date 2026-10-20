@@ -1,0 +1,12 @@
+{
+  "name": "Mộc Inventory — Quản lý kho trà sữa",
+  "short_name": "Mộc Kho",
+  "description": "Quản lý nguyên liệu, bán thành phẩm và đối soát POS cho quán trà sữa.",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8f5",
+  "theme_color": "#17251e",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
