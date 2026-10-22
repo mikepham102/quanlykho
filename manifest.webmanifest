@@ -1,7 +1,7 @@
 {
-  "name": "Mộc — Quản lý kho trà sữa",
-  "short_name": "Mộc",
-  "description": "Quản lý nguyên liệu, bán thành phẩm và đối soát POS cho quán trà sữa.",
+  "name": "Cửa hàng — Quản lý kho trà sữa",
+  "short_name": "Cửa hàng",
+  "description": "Quản lý nguyên liệu, bán thành phẩm và đối soát POS cho cửa hàng trà sữa.",
   "lang": "vi",
   "start_url": "./",
   "scope": "./",
