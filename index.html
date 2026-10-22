@@ -166,6 +166,67 @@ body { min-height: 100vh; min-height: 100dvh; overflow-y: scroll; }
   }
 }
 </style>
+
+<style id="mobile-readable-type">
+/* Readability pass: larger type and touch targets on phones */
+@media (max-width: 640px) {
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { font-size: 16px !important; line-height: 1.5; }
+  .content { padding: 18px 13px calc(92px + env(safe-area-inset-bottom)); }
+  .topbar { min-height: 60px; height: auto; padding: 10px 12px; }
+  .crumb { font-size: 14px; line-height: 1.35; }
+  .page-head h1 { font-size: 26px !important; line-height: 1.25; letter-spacing: -.3px; }
+  .page-head .sub, .sub { font-size: 15px !important; line-height: 1.5; }
+  .eyebrow { font-size: 12px !important; line-height: 1.4; letter-spacing: .7px; }
+  .panel-title, .workflow-stack-title { font-size: 16px !important; line-height: 1.4; }
+  .panel-sub { font-size: 13px !important; line-height: 1.45; }
+  .metric-top { font-size: 13px !important; line-height: 1.35; }
+  .metric-value { font-size: 23px !important; line-height: 1.2; }
+  .metric-foot { font-size: 12px !important; line-height: 1.4; }
+  .action b, .settings-copy b { font-size: 14px !important; line-height: 1.35; }
+  .action small, .settings-copy small { font-size: 12px !important; line-height: 1.4; }
+  .btn, button.btn, .tab, .link { font-size: 14px !important; line-height: 1.35; }
+  .btn { min-height: 44px; }
+  .btn.small { min-height: 42px; font-size: 13px !important; }
+  input, select, textarea, .search, .field input, .field select, .field textarea { font-size: 16px !important; line-height: 1.4; }
+  .field label { font-size: 14px !important; line-height: 1.4; }
+  .notice, .report { font-size: 14px !important; line-height: 1.6; }
+  th { font-size: 12px !important; }
+  td { font-size: 14px !important; line-height: 1.45; }
+  .pill { font-size: 12px !important; line-height: 1.35; }
+  .tab { padding: 10px 11px; }
+  .modal { padding: 20px 16px; max-height: 88dvh; }
+  .modal h2 { font-size: 22px !important; line-height: 1.3; }
+  .modal .sub { font-size: 15px !important; }
+  .drop { font-size: 14px !important; line-height: 1.5; }
+  .toast { font-size: 14px !important; line-height: 1.45; }
+  .auth-card h1 { font-size: 25px !important; }
+  .auth-card p { font-size: 15px !important; line-height: 1.5; }
+  .auth-error, .auth-success, .auth-link, .auth-loading { font-size: 14px !important; line-height: 1.45; }
+  .account-menu > div { font-size: 14px !important; }
+  .role-select { font-size: 14px !important; }
+  .mobile-bottom-nav .ico { font-size: 19px !important; }
+  .mobile-bottom-nav .nav-text { font-size: 11px !important; line-height: 1.2; }
+  /* Keep dashboard card labels readable without forcing the cards too wide */
+  .cards { gap: 9px; }
+  .metric { padding: 12px 11px; }
+  .metric-top .metric-icon { flex: 0 0 25px; }
+  #page-dashboard #low-table td { font-size: 13px !important; line-height: 1.4; }
+  #page-dashboard #low-table td:before { font-size: 11px !important; line-height: 1.35; }
+  .inventory-filter-grid .search { font-size: 13px !important; padding: 10px 7px; }
+  .inventory-workflow-btn { font-size: 12px !important; line-height: 1.25; min-height: 42px; }
+}
+@media (max-width: 380px) {
+  .page-head h1 { font-size: 24px !important; }
+  .metric-top { font-size: 12px !important; }
+  .metric-value { font-size: 21px !important; }
+  .metric-foot { font-size: 11px !important; }
+  .mobile-bottom-nav .nav-text { font-size: 10px !important; }
+  .inventory-filter-grid { grid-template-columns: 1fr; }
+  .inventory-filter-grid .search { font-size: 15px !important; }
+}
+</style>
+
 </head><body><div id="auth-gate" role="dialog" aria-modal="true"></div><div class="app"><aside class="sidebar"><div class="brand"><div class="brand-icon" id="brand-logo">✳</div><div class="brand-label"><span id="brand-name">CỬA HÀNG</span><small id="brand-branch" hidden></small></div></div><div class="nav-label">Tổng quan</div><nav class="nav"><button class="active" data-page="dashboard"><span class="ico">▦</span><span class="nav-text">Bảng điều khiển</span></button></nav><div class="nav-label">Vận hành</div><nav class="nav"><button data-page="inventory"><span class="ico">◫</span><span class="nav-text">Tồn kho</span></button><button data-page="operations"><span class="ico">⇄</span><span class="nav-text">Phiếu kho</span></button><button data-page="recipes"><span class="ico">◉</span><span class="nav-text">Công thức & món</span></button><button data-page="reconcile"><span class="ico">▤</span><span class="nav-text">Đối soát POS</span></button></nav><div class="nav-label">Hệ thống</div><nav class="nav"><button data-page="settings"><span class="ico">⚙</span><span class="nav-text">Cài đặt</span></button></nav><div class="side-foot">CHẾ ĐỘ ĐỘC LẬP<br><strong>Dữ liệu lưu trên thiết bị này</strong></div><nav class="mobile-bottom-nav" aria-label="Điều hướng chính"><button class="active" data-page="dashboard"><span class="ico">▦</span><span class="nav-text">Tổng quan</span></button><button data-page="inventory"><span class="ico">◫</span><span class="nav-text">Tồn kho</span></button><button data-page="operations"><span class="ico">⇄</span><span class="nav-text">Phiếu kho</span></button><button data-page="recipes"><span class="ico">◉</span><span class="nav-text">Công thức</span></button><button data-page="reconcile"><span class="ico">▤</span><span class="nav-text">Đối soát</span></button><button data-page="settings"><span class="ico">⚙</span><span class="nav-text">Cài đặt</span></button></nav></aside><main class="main"><header class="topbar"><div class="crumb"><span id="brand-crumb">Cửa hàng</span> / <b id="crumb">Bảng điều khiển</b></div><div class="top-actions"><div class="date-label" id="today"></div><button class="avatar account-button" id="account-button" onclick="toggleAccountMenu()" aria-label="Tài khoản">M</button></div></header><div class="content">
 <section class="page active" id="page-dashboard"><div class="page-head"><div><p class="eyebrow">Thứ Hai · Ca vận hành</p><h1>Tổng quan kho</h1><p class="sub">Theo dõi nguyên liệu và hoạt động trong ngày.</p></div></div><div class="cards" id="metrics"></div><div class="actions"><button class="action" onclick="openModal('stockin')"><span class="metric-icon">＋</span><span><b>Nhập nguyên liệu</b><small>Tạo phiếu nhập kho</small></span></button><button class="action" onclick="openModal('prep')"><span class="metric-icon">♨</span><span><b>Nấu bán thành phẩm</b><small>Trừ nguyên liệu, cộng BTP</small></span></button><button class="action" onclick="openModal('waste')"><span class="metric-icon">⌫</span><span><b>Ghi nhận hao hụt</b><small>Xuất hủy khỏi tồn kho</small></span></button><button class="action" onclick="openModal('import')"><span class="metric-icon">⇧</span><span><b>Nhập báo cáo POS</b><small>Đối soát doanh số bán</small></span></button></div><div class="grid2"><div class="panel"><div class="panel-head"><div><div class="panel-title">Nguyên liệu cần chú ý</div><div class="panel-sub">Tồn kho chạm hoặc dưới ngưỡng tối thiểu</div></div><button class="link" onclick="navigate('inventory')">Xem tất cả →</button></div><div class="table-wrap"><table><thead><tr><th>Nguyên liệu</th><th>Danh mục</th><th>Tồn hiện tại</th><th>Ngưỡng tối thiểu</th><th>Trạng thái</th></tr></thead><tbody id="low-table"></tbody></table></div></div><div class="panel"><div class="panel-head"><div><div class="panel-title">Hoạt động gần đây</div><div class="panel-sub">Các thay đổi mới nhất trong kho</div></div></div><div class="activity" id="activity"></div></div></div><div class="footnote" id="brand-footer">CỬA HÀNG · Quản lý kho gọn gàng mỗi ngày</div></section>
 <section class="page" id="page-inventory"><div class="page-head"><div><p class="eyebrow">Danh mục kho</p><h1>Tồn kho</h1><p class="sub">Tồn tính đến hết ngày đã chọn, dựa trên phiếu kho và kiểm kê đã lưu.</p></div><div class="inventory-head-tools"><div class="inventory-date-tools"><label class="inventory-day-control"><span>Ngày xem tồn</span><input class="search" id="inventory-day-filter" type="date" onchange="setInventoryDay(this.value)"></label><button class="btn" onclick="setInventoryDayToday()">⌂ Hôm nay</button></div><div id="inventory-workflow-actions" class="inventory-workflow-actions" aria-label="Nghiệp vụ kho"></div></div></div><div class="panel"><div class="panel-head inventory-list-head"><div class="inventory-filter-grid"><input class="search" id="inventory-search" placeholder="Tìm mặt hàng..." oninput="renderInventory()"><select class="search" id="inventory-type-filter" aria-label="Lọc theo loại" onchange="renderInventory()"><option value="all">Tất cả loại</option><option value="raw">Nguyên liệu thô</option><option value="prep">Bán thành phẩm</option><option value="low">Sắp hết</option></select><select class="search" id="inventory-category-filter" aria-label="Lọc theo danh mục" onchange="renderInventory()"><option value="all">Tất cả danh mục</option></select></div></div><div class="table-wrap" id="inventory-table-wrap"><table><thead><tr><th>Mã</th><th>Tên mặt hàng</th><th>Loại</th><th>Danh mục</th><th>Tồn ngày xem</th><th>Đơn vị</th><th>Ngưỡng tối thiểu</th><th>Trạng thái</th><th></th></tr></thead><tbody id="inventory-table"></tbody></table></div><div class="mobile-accordion-list" id="inventory-mobile-list"></div></div></section>
