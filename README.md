@@ -1,4 +1,4 @@
-# Mộc Inventory
+# HONGCHA Inventory
 
 Ứng dụng quản lý kho trà sữa. Giao diện tĩnh được triển khai bằng GitHub Pages; khi cấu hình Supabase, tài khoản và dữ liệu kho được dùng chung giữa các thiết bị.
 
