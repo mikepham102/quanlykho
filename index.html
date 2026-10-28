@@ -395,7 +395,7 @@ input[type="file"]{font-size:var(--fs-sm);padding:8px}
   .sidebar > .mobile-bottom-nav{height:calc(70px + env(safe-area-inset-bottom));padding:5px 5px calc(5px + env(safe-area-inset-bottom));gap:2px}
   .mobile-bottom-nav button{border-radius:12px}
   .mobile-bottom-nav .ico{font-size:21px}
-  :root .mobile-bottom-nav .nav-text{font-size:var(--fs-nav);line-height:1.15}
+  :root .mobile-bottom-nav .nav-text{font-size:var(--fs-nav);line-height:1.15;white-space:nowrap}
   .mobile-bottom-nav button.active{background:#24392d !important;border-radius:12px !important}
   .account-menu{top:calc(52px + env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
   :root .settings-copy small{font-size:var(--fs-sm)}
@@ -433,6 +433,69 @@ input[type="file"]{font-size:var(--fs-sm);padding:8px}
   :root .settings-row{min-height:64px;padding:11px 13px}
   :root .field input:not([type="checkbox"]):not([type="file"]),:root .field select,:root .field textarea,:root .search{min-height:40px;font-size:14px}
   .inventory-workflow-btn{min-height:44px}
+}
+/* ===== Thống nhất cách hiển thị dữ liệu (metric, dòng dữ liệu, nhãn) ===== */
+.card.metric{min-height:0;padding:12px 14px}
+.metric-line{display:flex;align-items:center;gap:9px;min-width:0}
+.metric-line .metric-icon{width:26px;height:26px;font-size:13px;flex:0 0 auto;border-radius:8px}
+.metric-label{flex:1;min-width:0;font-size:calc(var(--fs-body) - 3px);font-weight:700;color:#3f5348;line-height:1.3}
+.metric-line .metric-value{margin:0;font-size:calc(var(--fs-h1) - 3px);line-height:1.1;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+:root .metric-foot{margin-top:5px;font-size:calc(var(--fs-body) - 4px);line-height:1.35}
+:root .act-text{display:grid;gap:1px;font-size:calc(var(--fs-body) - 2px);line-height:1.35}
+:root .act-text small{font-size:calc(var(--fs-body) - 4px);color:var(--muted);font-weight:600}
+:root .act-time{font-size:calc(var(--fs-body) - 4px)}
+:root .activity-row{padding:11px 0;gap:11px}
+:root .footnote{font-size:var(--fs-sm)}
+:root .eyebrow{font-size:11px;letter-spacing:1.2px}
+:root .inventory-day-control{font-size:calc(var(--fs-body) - 3.5px)}
+:root .account-menu>div{font-size:calc(var(--fs-body) - 3px);padding:7px 4px}
+:root .account-menu .role-select{font-size:calc(var(--fs-body) - 2px);min-height:40px}
+:root .operation-card .operation-item{font-size:calc(var(--fs-body) - 1px)}
+:root .operation-card .operation-note,:root .operation-card time{font-size:calc(var(--fs-body) - 4px)}
+:root .operation-quantity{font-size:calc(var(--fs-body) - 1.5px)}
+:root .recipe-price-suggestion small{font-size:var(--fs-sm);line-height:1.4}
+/* Nhãn dữ liệu trong thẻ mobile, form và bảng điều khiển */
+:root .mobile-facts>div span:first-child,:root .mobile-prep-info>span,:root .mobile-prep-recipe h4{font-size:11px;letter-spacing:.3px}
+:root .mobile-code{font-size:12px}
+:root .mobile-ingredient{font-size:calc(var(--fs-body) - 3px)}
+:root .mobile-badge{font-size:11px}
+:root .inventory-summary-name small{font-size:11.5px}
+:root .inventory-summary-change{font-size:11px}
+:root .operation-card footer span{font-size:calc(var(--fs-body) - 4px)}
+:root .settings-data-footer>span{font-size:calc(var(--fs-body) - 4px)}
+:root .flow-entry-name small,:root .flow-entry-stock span,:root .flow-entry-qty span,:root .flow-entry-qty small{font-size:calc(var(--fs-body) - 4px)}
+:root .dayclose-card-head span,:root .dayclose-issued span,:root .dayclose-quantity>span,:root .dayclose-quantity small{font-size:calc(var(--fs-body) - 4px)}
+:root .template-downloads>small,:root .file-import-block>small{font-size:calc(var(--fs-body) - 4px);line-height:1.5}
+:root .field small.muted{font-size:calc(var(--fs-body) - 4px);line-height:1.45}
+:root .action small{font-size:calc(var(--fs-body) - 3px)}
+:root .nav-label{font-size:11px}
+@media (max-width:640px){
+  /* Dashboard: 4 chỉ số thành 4 dòng gọn, mỗi dòng một nhãn + một số */
+  .cards{grid-template-columns:1fr;gap:6px}
+  .cards .metric{min-height:0;padding:9px 12px}
+  .cards .metric .metric-line{gap:10px}
+  .cards .metric .metric-foot{display:none}
+  .cards .metric .metric-icon{width:24px;height:24px;font-size:12px}
+  /* Tồn kho: ngày xem + 4 nghiệp vụ nhanh + bộ lọc, cùng một cỡ chạm */
+  #page-inventory .inventory-head-tools{width:100%;justify-items:stretch;gap:8px}
+  #page-inventory .inventory-date-tools{width:100%;gap:8px}
+  #page-inventory .inventory-day-control{flex:1;min-width:0}
+  #page-inventory #inventory-workflow-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
+  #page-inventory #inventory-workflow-actions .inventory-workflow-btn{width:100%;min-height:48px;justify-content:flex-start;gap:8px;padding:8px 11px;font-size:calc(var(--fs-body) - 2px);border-radius:11px}
+  #page-inventory #inventory-workflow-actions .inventory-workflow-btn>span:first-child{font-size:17px}
+  #page-inventory .inventory-filter-grid{grid-template-columns:1fr;gap:8px}
+  #page-inventory .inventory-filter-grid .search{width:100%;min-width:0;min-height:46px;padding:10px 12px;font-size:16px}
+  /* Tab bar ngang: làm mờ mép phải để thấy còn tab khác */
+  #page-operations .tabline{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+  /* Thẻ nguyên liệu cần chú ý: tên + trạng thái cùng dòng, bỏ danh mục cho gọn */
+  #page-dashboard #low-table td:nth-child(2){display:none}
+  #page-dashboard #low-table td:nth-child(5){display:flex;grid-column:2;grid-row:1;align-items:flex-end;justify-content:flex-end;border:0;margin:0;padding:0}
+  #page-dashboard #low-table td:nth-child(5):before{content:none}
+  #page-dashboard #low-table td:first-child{font-size:calc(var(--fs-body) - 2px);font-weight:700}
+}
+@media (min-width:641px){
+  .inventory-workflow-btn{min-height:40px;padding:7px 11px;font-size:12.5px}
+  .inventory-workflow-btn>span:first-child{font-size:15px}
 }
 </style>
 </head><body><div id="auth-gate" role="dialog" aria-modal="true"></div><div class="app"><aside class="sidebar"><div class="brand"><div class="brand-icon" id="brand-logo">✳</div><div class="brand-label"><span id="brand-name">MỘC</span><small id="brand-branch">INVENTORY</small></div></div><div class="nav-label">Tổng quan</div><nav class="nav"><button class="active" data-page="dashboard"><span class="ico">▦</span><span class="nav-text">Bảng điều khiển</span></button></nav><div class="nav-label">Vận hành</div><nav class="nav"><button data-page="inventory"><span class="ico">◫</span><span class="nav-text">Tồn kho</span></button><button data-page="operations"><span class="ico">⇄</span><span class="nav-text">Phiếu kho</span></button><button data-page="recipes"><span class="ico">◉</span><span class="nav-text">Công thức & món</span></button><button data-page="reconcile"><span class="ico">▤</span><span class="nav-text">Đối soát POS</span></button></nav><div class="nav-label">Hệ thống</div><nav class="nav"><button data-page="settings"><span class="ico">⚙</span><span class="nav-text">Cài đặt</span></button></nav><div class="side-foot">CHẾ ĐỘ ĐỘC LẬP<br><strong>Dữ liệu lưu trên thiết bị này</strong></div><nav class="mobile-bottom-nav" aria-label="Điều hướng chính"><button class="active" data-page="dashboard"><span class="ico">▦</span><span class="nav-text">Tổng quan</span></button><button data-page="inventory"><span class="ico">◫</span><span class="nav-text">Tồn kho</span></button><button data-page="operations"><span class="ico">⇄</span><span class="nav-text">Phiếu kho</span></button><button data-page="recipes"><span class="ico">◉</span><span class="nav-text">Công thức</span></button><button data-page="reconcile"><span class="ico">▤</span><span class="nav-text">Đối soát</span></button><button data-page="settings"><span class="ico">⚙</span><span class="nav-text">Cài đặt</span></button></nav></aside><main class="main"><header class="topbar"><div class="crumb"><span id="brand-crumb">Mộc</span> / <b id="crumb">Bảng điều khiển</b></div><div class="top-actions"><div class="date-label" id="today"></div><button class="avatar account-button" id="account-button" onclick="toggleAccountMenu()" aria-label="Tài khoản">M</button></div></header><div class="content">
@@ -607,7 +670,8 @@ async function changeWorkspaceRole(id,role){if(cloudRole!=='owner')return;let {e
 let today=new Date;document.getElementById('today').textContent=today.toLocaleDateString('vi-VN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});document.querySelector('.eyebrow').textContent=today.toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase())+' · Ca vận hành';function renderInventoryDateControl(){let input=document.getElementById('inventory-day-filter');if(input)input.value=inventoryDayFilter}function setInventoryDay(day){if(!day)return;inventoryDayFilter=day;renderInventoryDateControl();let search=document.querySelector('#page-inventory .panel-head input.search'),select=document.querySelector('#page-inventory .panel-head select.search');renderInventory(search?.value||'',select?.value||'all')}function setInventoryDayToday(){setInventoryDay(localDay())}
 
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>navigate(b.dataset.page));function navigate(p){if(!roleCanOpen(p))return toast('Tài khoản này không có quyền mở mục đó.');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');window.scrollTo(0,0);let mainScroll=document.querySelector('.main');if(mainScroll)mainScroll.scrollTop=0;document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===p));document.getElementById('crumb').textContent=({dashboard:'Bảng điều khiển',inventory:'Tồn kho',recipes:'Công thức & món',operations:'Phiếu kho',reconcile:'Đối soát POS',settings:'Cài đặt'})[p];if(p==='operations')opFilter='all';renderAll()}
-function renderDashboard(){let low=db.items.filter(x=>x.qty<=x.min),canSeePos=!cloudMode||cloudRole==='owner';document.getElementById('metrics').innerHTML=`<div class="card metric"><div class="metric-top">Mặt hàng đang quản lý <span class="metric-icon">◫</span></div><div class="metric-value">${db.items.length}</div><div class="metric-foot">${db.items.filter(x=>x.type==='raw').length} nguyên liệu · ${db.items.filter(x=>x.type==='prep').length} bán thành phẩm</div></div><div class="card metric"><div class="metric-top">Cần nhập thêm <span class="metric-icon" style="background:var(--amber);color:#96621e">!</span></div><div class="metric-value">${low.length}</div><div class="metric-foot ${low.length?'warn':''}">${low.length?'Mặt hàng chạm ngưỡng tối thiểu':'Tồn kho đang ổn định'}</div></div><div class="card metric"><div class="metric-top">Món bán hôm nay <span class="metric-icon">⌁</span></div><div class="metric-value">${canSeePos?db.imports.filter(x=>x.date===new Date().toISOString().slice(0,10)).reduce((s,x)=>s+x.total,0):'—'}</div><div class="metric-foot">${canSeePos?'Từ báo cáo POS đã nhập':'Chủ quán quản lý dữ liệu POS'}</div></div><div class="card metric"><div class="metric-top">Món đã khai báo BOM <span class="metric-icon">◉</span></div><div class="metric-value">${canSeePos?db.pos.length:'—'}</div><div class="metric-foot">${canSeePos?'Món POS sẵn sàng đối soát':'Chủ quán quản lý công thức'}</div></div>`;document.getElementById('low-table').innerHTML=low.length?low.slice(0,5).map(x=>`<tr class="${x.qty===0?'stock-empty':'stock-low'}"><td class="item">${x.name}</td><td class="muted">${x.cat||'—'}</td><td>${fmt(x.qty)} ${x.unit}</td><td class="muted">${fmt(x.min)} ${x.unit}</td><td><span class="pill ${x.qty===0?'bad':'low'}">${x.qty===0?'Hết hàng':'Sắp hết'}</span></td></tr>`).join(''):`<tr><td colspan="5" class="empty">Tất cả mặt hàng đang trên ngưỡng tối thiểu.</td></tr>`;document.getElementById('activity').innerHTML=db.ops.slice(0,5).map(o=>`<div class="activity-row"><span class="act-icon">${o.kind==='stockin'?'＋':o.kind==='prep'?'♨':'⌫'}</span><div class="act-text"><b>${o.name}</b>${o.ref||''}</div><span class="act-time">${new Date(o.date).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')||'<div class="empty">Chưa có hoạt động.</div>'}
+function renderDashboard(){let low=db.items.filter(x=>x.qty<=x.min),canSeePos=!cloudMode||cloudRole==='owner',todaySold=canSeePos?db.imports.filter(x=>x.date===new Date().toISOString().slice(0,10)).reduce((s,x)=>s+x.total,0):'—',metric=(icon,label,value,foot,iconStyle,footWarn)=>`<div class="card metric"><div class="metric-line"><span class="metric-icon"${iconStyle?' style="'+iconStyle+'"':''} aria-hidden="true">${icon}</span><span class="metric-label">${label}</span><span class="metric-value">${value}</span></div><div class="metric-foot${footWarn?' warn':''}">${foot}</div></div>`;
+document.getElementById('metrics').innerHTML=metric('◫','Mặt hàng đang quản lý',db.items.length,`${db.items.filter(x=>x.type==='raw').length} nguyên liệu · ${db.items.filter(x=>x.type==='prep').length} bán thành phẩm`)+metric('!','Cần nhập thêm',low.length,low.length?'Mặt hàng chạm ngưỡng tối thiểu':'Tồn kho đang ổn định','background:var(--amber);color:#96621e',Boolean(low.length))+metric('⌁','Món bán hôm nay',todaySold,canSeePos?'Từ báo cáo POS đã nhập':'Chủ quán quản lý dữ liệu POS')+metric('◉','Món đã khai báo BOM',canSeePos?db.pos.length:'—',canSeePos?'Món POS sẵn sàng đối soát':'Chủ quán quản lý công thức');document.getElementById('low-table').innerHTML=low.length?low.slice(0,5).map(x=>`<tr class="${x.qty===0?'stock-empty':'stock-low'}"><td class="item">${x.name}</td><td class="muted">${x.cat||'—'}</td><td>${fmt(x.qty)} ${x.unit}</td><td class="muted">${fmt(x.min)} ${x.unit}</td><td><span class="pill ${x.qty===0?'bad':'low'}">${x.qty===0?'Hết hàng':'Sắp hết'}</span></td></tr>`).join(''):`<tr><td colspan="5" class="empty">Tất cả mặt hàng đang trên ngưỡng tối thiểu.</td></tr>`;document.getElementById('activity').innerHTML=db.ops.slice(0,5).map(o=>`<div class="activity-row"><span class="act-icon">${o.kind==='stockin'?'＋':o.kind==='prep'?'♨':'⌫'}</span><div class="act-text"><b>${o.name}</b>${o.ref?`<small>${o.ref}</small>`:''}</div><span class="act-time">${new Date(o.date).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}</span></div>`).join('')||'<div class="empty">Chưa có hoạt động.</div>'}
 function operationItemQuantity(o){if(Number(o.rawQty)>0)return Number(o.rawQty);let text=String(o.qty||''),match=text.match(/[\d.,]+/);if(!match)return 0;let value=match[0];if(value.includes('.')&&value.includes(','))value=value.replace(/\./g,'').replace(',','.');else if(/\.\d{3}$/.test(value))value=value.replace(/\./g,'');else value=value.replace(',','.');return Number(value)||0}
 function operationBelongsToItem(o,x){return o.itemId===x.id||(!o.itemId&&(o.name===x.name||o.name?.startsWith(x.name+' · ')))}
 function inventoryItemEvents(x){return(db.ops||[]).filter(o=>operationBelongsToItem(o,x)).map(o=>({day:operationDay(o),date:new Date(o.date),delta:operationEffect(o.kind,operationItemQuantity(o))})).filter(e=>Number.isFinite(e.date.getTime()))}
