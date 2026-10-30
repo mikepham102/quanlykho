@@ -125,6 +125,15 @@ check(
   'mở menu tạo lớp nền và menu rộng tối đa 340px',
   /Math\.min\(340,window\.innerWidth-24\)/.test(src) && /className='picker-backdrop'/.test(src)
 );
+check(
+  'lớp nền nằm trong modal và dưới menu (không che menu)',
+  /picker-backdrop\{position:fixed;inset:0;z-index:9990;background:transparent/.test(src) &&
+    src.includes("(trigger.closest('.modal-back')||document.body).append(backdrop)")
+);
+check(
+  'chế độ local file:// gỡ trạng thái booting để app hiện ra',
+  /document\.documentElement\.classList\.remove\('booting'\);applyRolePermissions\(\);return\}/.test(src)
+);
 
 // 4c. Chính sách giá & giá đề xuất (cấu hình trong Cài đặt) ------------------
 check(

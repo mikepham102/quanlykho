@@ -541,9 +541,9 @@ input[type="file"]{font-size:var(--fs-sm);padding:8px}
   .inventory-workflow-btn{min-height:40px;padding:7px 11px;font-size:12.5px}
   .inventory-workflow-btn>span:first-child{font-size:15px}
 }
-.picker-backdrop{position:fixed;inset:0;z-index:9999;background:#101a1538;touch-action:none}
-@media(min-width:641px){.picker-backdrop{background:transparent}}
-.ingredient-picker-close{position:absolute;top:10px;right:10px;z-index:3;width:36px;height:36px;min-height:36px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:9px;background:#fff;color:#66766d;font-size:19px;line-height:1;font-weight:700;cursor:pointer}
+
+
+.picker-backdrop{position:fixed;inset:0;z-index:9990;background:transparent;touch-action:none}.ingredient-picker-close{position:absolute;top:10px;right:10px;z-index:3;width:36px;height:36px;min-height:36px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:9px;background:#fff;color:#66766d;font-size:19px;line-height:1;font-weight:700;cursor:pointer}
 .ingredient-picker-close:hover{background:#fff4f2;border-color:#ecc5bd;color:#a04436}
 :root .ingredient-picker-search{padding-right:52px}
 @media(max-width:640px){.ingredient-picker-close{width:40px;height:40px;min-height:40px;font-size:20px}}
@@ -660,7 +660,7 @@ async function submitLogin(){let button=document.querySelector('#auth-gate butto
 function startCloudPolling(){if(cloudPollTimer)clearInterval(cloudPollTimer);cloudPollTimer=setInterval(refreshCloudWorkspace,15000)}
 async function refreshCloudWorkspace(){if(!cloudReady||document.getElementById('modal-back')?.classList.contains('show'))return;let {data,error}=await cloudClient.rpc('load_workspace_state');if(error||!data||Number(data._revision||0)<=Number(db._revision||0))return;db={...demo,...data};lastCloudSnapshot=structuredClone(data);localStorage.setItem(KEY,JSON.stringify(db));renderAll();applyRolePermissions()}
 async function startCloud(){
-  if(!cloudMode){if(location.protocol==='http:'||location.protocol==='https:'){let gate=document.getElementById('auth-gate');gate.innerHTML='<div class="auth-card"><div class="brand-icon" id="auth-brand-icon" style="margin-bottom:13px">✳</div><h1>Chưa cấu hình dữ liệu dùng chung</h1><p id="auth-brand-context"></p><p>Hãy điền Project URL và anon/public key trong supabase-config.js rồi tải lại trang. Ứng dụng khóa truy cập web khi chưa bật Supabase.</p></div>';safeApplyBranding();gate.classList.add('show');return}applyRolePermissions();return}
+  if(!cloudMode){if(location.protocol==='http:'||location.protocol==='https:'){let gate=document.getElementById('auth-gate');gate.innerHTML='<div class="auth-card"><div class="brand-icon" id="auth-brand-icon" style="margin-bottom:13px">✳</div><h1>Chưa cấu hình dữ liệu dùng chung</h1><p id="auth-brand-context"></p><p>Hãy điền Project URL và anon/public key trong supabase-config.js rồi tải lại trang. Ứng dụng khóa truy cập web khi chưa bật Supabase.</p></div>';safeApplyBranding();gate.classList.add('show');return}document.documentElement.classList.remove('booting');applyRolePermissions();return}
   const recoveryLink=new URLSearchParams(location.hash.slice(1)).get('type')==='recovery'||new URLSearchParams(location.search).get('type')==='recovery';
   if(recoveryLink)pendingPasswordRecovery=true;
   showAuthLoading('Đang kiểm tra phiên và tải dữ liệu kho…');
@@ -1003,7 +1003,7 @@ function toggleIngredientPicker(trigger){
   backdrop.className='picker-backdrop';
   backdrop.setAttribute('aria-hidden','true');
   backdrop.addEventListener('click',closeIngredientPickers);
-  document.body.append(backdrop);
+  (trigger.closest('.modal-back')||document.body).append(backdrop);
   menu.hidden=false;
   trigger.setAttribute('aria-expanded','true');
   let rect=trigger.getBoundingClientRect(),width=Math.min(340,window.innerWidth-24),height=Math.min(410,Math.max(240,window.innerHeight*.52)),top=Math.min(rect.bottom+6,window.innerHeight-height-12);
