@@ -14,4 +14,4 @@ Ghi chú của lần chốt này:
 
 | Ngày | Phạm vi | Cần chốt vào docs |
 |---|---|---|
-| — | — | Không có thay đổi nào đang chờ chốt. |
+| 30/10/2026 | Giao diện **Xuất đầu ca** (thẻ dòng hàng) | `.flow-entry-card` gọn 2 dòng: **bỏ mã hàng**, tên ở trên cùng nút **×** sát phải thẻ, bên dưới là “Tồn kho” và **ô số lượng vuông** (48×48 mobile, 48×44 desktop) nằm ngang. Áp cho cả 3 luồng `flow-raw`/`flow-sale`/`flow-prep` (Xuất đầu ca, Xuất BTP ra bán, Nấu thành phẩm) vì dùng chung `flowCardRows()`/`addFlowItem()`; tên hàng được `xEsc`; `aria-label` cho ô số lượng và nút xoá. `sw.js` v23; `verify.js` giữ 127 mục. |
