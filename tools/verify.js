@@ -289,7 +289,7 @@ check(
 );
 check(
   'các phiếu kho dùng chung bộ chọn mặt hàng (không còn select thô)',
-  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 5 &&
+  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 4 &&
     !src.includes('<select id="f-item">')
 );
 check(
@@ -374,24 +374,30 @@ check(
 );
 check('trang Công thức có bảng mẻ nấu gần đây', /id="batches-table"/.test(src) && /renderBatches\(\)/.test(src) && /id="batch-frequency"/.test(src));
 
-// 10. Vị trí bảo quản --------------------------------------------------------
+// 10. Vị trí trữ hàng (chỉ ghi trên phiếu xuất thô) -------------------------
 check(
-  'vị trí: xuất kho trừ tồn và ghi nhận số đang ở quầy/tủ',
-  /function addLocationOp\(/.test(src) && /kind==='issue_location'\)\{if\(q>x\.qty/.test(src) && /at\[locId\]=\(at\[locId\]\|\|0\)\+q/.test(src)
+  'mặt hàng thô có ô chọn vị trí xuất ra',
+  /id="f-loc"/.test(src) && src.includes('Vị trí xuất ra khi dùng')
 );
 check(
-  'vị trí: dùng tại chỗ không đổi tồn kho, trả kho cộng lại',
-  /kind==='use_location'\)\{if\(q>/.test(src) && /kind==='return_location'\)\{[^}]*x\.qty\+=q/.test(src) && /issue_location'\).*-qty/s.test(src)
+  'lưu mặt hàng ghi locId và bỏ at cũ',
+  /x\.locId=val\('f-loc'\)/.test(src) && /delete x\.at/.test(src)
 );
 check(
-  'tồn tại vị trí được dựng lại từ phiếu (at là dữ liệu dẫn xuất)',
-  /function rebuildLocationBalances\(/.test(src) && /rebuildLocationBalances\(\);safeApplyBranding\(\)/.test(src)
+  'phiếu xuất thô gắn locationId và tên có vị trí',
+  /kind:'stockout'[\s\S]{0,260}locationId:x\.locId/.test(src) &&
+    /Xuất dùng đầu ca'\+\(loc\?' → '\+loc:''\)/.test(src)
 );
 check(
-  'có bảng Hàng ngoài kho và mục Cài đặt Vị trí bảo quản',
-  /id="loc-table"/.test(src) && /openLocations\(\)/.test(src) && /Vị trí bảo quản/.test(src)
+  'đã bỏ nghiệp vụ Quầy & tủ riêng',
+  !src.includes("openModal('locmove')") && !src.includes('openLocationMove') &&
+    !src.includes('addLocationOp') && !/id="loc-table"/.test(src)
 );
-check('phiếu vị trí được tính vào chênh lệch theo kỳ', /o\.kind==='issue_location'\)outNet\+=q/.test(src) && /o\.kind==='return_location'\)outNet-=q/.test(src));
+check(
+  'Cài đặt có Vị trí trữ hàng, không còn bảng Hàng ngoài kho',
+  /openLocations\(\)/.test(src) && src.includes('Vị trí trữ hàng') && !src.includes('Hàng ngoài kho')
+);
+check('phiếu vị trí cũ vẫn được tính vào chênh lệch (dữ liệu cũ)', /o\.kind==='issue_location'\)outNet\+=q/.test(src) && /o\.kind==='return_location'\)outNet-=q/.test(src));
 
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
 check(
