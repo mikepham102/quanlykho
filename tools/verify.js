@@ -261,8 +261,14 @@ check(
 );
 check('nhắc xoay dọc khi điện thoại nằm ngang', /orientation:landscape\) and \(max-height:520px/.test(src));
 check(
-  'dashboard dùng .metric-line gọn và ẩn chú thích trên mobile',
-  src.includes('class="metric-line"') && src.includes('class="metric-label"') && /\.cards \.metric \.metric-foot\{display:none\}/.test(src)
+  'dashboard gom 3 số vào thẻ Số liệu vận hành, bỏ Món bán hôm nay',
+  src.includes('Số liệu vận hành') && src.includes('ops-summary') && src.includes('ops-stats') && !src.includes('Món bán hôm nay')
+);
+check(
+  'dashboard: sắp hết hạn nằm trên sắp hết, có renderExpiring',
+  src.includes('id="expiring-panel"') && src.includes('id="low-panel"') &&
+    src.indexOf('id="expiring-panel"') < src.indexOf('id="low-panel"') &&
+    /function renderExpiring\(/.test(src) && /renderExpiring\(\)/.test(src)
 );
 check(
   'bộ lọc tồn kho xếp dọc, ô 46px, chữ 16px',
