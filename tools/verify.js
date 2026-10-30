@@ -106,6 +106,25 @@ check(
   'picker có thông báo "không tìm thấy"',
   filterFn.includes('ingredient-picker-empty') && /\.ingredient-picker-empty\s*\{/.test(src)
 );
+check(
+  'menu chọn có nút đóng × và lớp nền',
+  src.includes('ingredient-picker-close') && src.includes('picker-backdrop')
+);
+check(
+  'đóng menu khi chạm nền, bấm Esc hoặc đóng modal',
+  /function closeIngredientPickers\(/.test(src) &&
+    /key==='Escape'/.test(src) &&
+    /function closeModal\(\)\{closeIngredientPickers\(\)/.test(src)
+);
+check(
+  'chọn xong đóng cả lớp nền (không còn nền mờ)',
+  /function pickItemOption[\s\S]{0,220}closeIngredientPickers\(\)/.test(src) &&
+    /function selectIngredientPicker[\s\S]{0,260}closeIngredientPickers\(\)/.test(src)
+);
+check(
+  'mở menu tạo lớp nền và menu rộng tối đa 340px',
+  /Math\.min\(340,window\.innerWidth-24\)/.test(src) && /className='picker-backdrop'/.test(src)
+);
 
 // 4c. Chính sách giá & giá đề xuất (cấu hình trong Cài đặt) ------------------
 check(
