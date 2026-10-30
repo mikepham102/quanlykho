@@ -135,27 +135,37 @@ check('đã bỏ chính sách giá hard-code cũ', !src.includes('PRICING_POLICY
 check('db.pricing được chuẩn hóa ngay khi nạp dữ liệu', src.includes('db.pricing=sanitizePricing(db.pricing)'));
 
 const pricingConst = (app.match(/const PRICING_DEFAULTS=\{[\s\S]*?\};/) || [])[0];
-const pricingFns = ['clampNumber', 'defaultPricing', 'sanitizePricing', 'priceNum', 'roundPrice', 'roundUpTo9k', 'priceModel', 'suggestedMenuPrices'].map(extractFn);
-check('đủ 8 hàm tính giá', Boolean(pricingConst) && pricingFns.every(Boolean));
+const pricingFns = ['clampNumber', 'defaultPricing', 'sanitizePricing', 'priceNum', 'priceModel', 'suggestedMenuPrices'].map(extractFn);
+check('đủ 6 hàm tính giá', Boolean(pricingConst) && pricingFns.every(Boolean));
 
 if (pricingConst && pricingFns.every(Boolean)) {
   const price = new Function(
     pricingConst + '\n' + pricingFns.join('\n') +
-    '\nreturn {defaultPricing,sanitizePricing,roundPrice,roundUpTo9k,priceModel,suggestedMenuPrices};'
+    '\nreturn {defaultPricing,sanitizePricing,priceModel,suggestedMenuPrices};'
   )();
   const d = price.defaultPricing();
   const m = price.priceModel(8855, d);
-  assertEq('giá đề xuất tại quán (mặc định)', m.store, 39000);
-  assertEq('giá đề xuất trên app (mặc định)', m.app, 49000);
+  assertEq('giá đề xuất tại quán (mặc định)', m.store, 30402);
+  assertEq('giá đề xuất trên app (mặc định)', m.app, 34418);
   assertEq('chi phí/ly sau hao hụt 3%', Math.round(m.totalCost), 9121);
-  assertEq('VAT 8% bóc tách từ 39.000', Math.round(m.storeVat), 2889);
-  assertEq('lãi sau thuế tại quán', Math.round(m.storeProfitAfterTax), 26990);
-  check('Food Cost tại quán không vượt mục tiêu', m.storeFoodCostPct <= 30);
+  assertEq('VAT 8% bóc tách từ giá quán', Math.round(m.storeVat), 2252);
+  assertEq('lãi sau thuế tại quán', Math.round(m.storeProfitAfterTax), 19029);
+  check('Food Cost tại quán không vượt mục tiêu', m.storeFoodCostPct <= 30.001);
+  check('lợi nhuận tại quán đạt mức mong muốn', m.storeMarginPct >= d.profitStore - 0.01);
+  check('lợi nhuận app đạt mức mong muốn', m.appMarginPct >= d.appProfit - 0.01);
+
+  const ex = price.priceModel(5000, d);
+  assertEq('ví dụ 5.000 đ (hao hụt 3%): giá quán', ex.store, 17167);
+  assertEq('ví dụ 5.000 đ (hao hụt 3%): giá app', ex.app, 19434);
+
+  const lowApp = price.priceModel(5000, price.sanitizePricing({ ...d, appProfit: 0 }));
+  assertEq('giá app không thấp hơn giá quán', lowApp.app, lowApp.store);
 
   const vat18 = price.priceModel(8855, price.sanitizePricing({ ...d, vatPct: 18 }));
   assertEq('VAT không làm đổi giá quán', vat18.store, m.store);
   assertEq('VAT không làm đổi giá app', vat18.app, m.app);
   check('VAT 18% làm tăng phần thuế bóc tách', vat18.storeVat > m.storeVat);
+  check('VAT không ảnh hưởng lợi nhuận trước thuế', Math.abs(vat18.storeProfit - m.storeProfit) < 0.01);
 
   const waste = price.priceModel(8855, price.sanitizePricing({ ...d, wastePct: 10 }));
   check('hao hụt làm tăng giá vốn/ly', waste.totalCost > m.totalCost);
@@ -171,20 +181,16 @@ if (pricingConst && pricingFns.every(Boolean)) {
   assertEq('chế độ "bằng giá quán" -> giá app = giá quán', same.app, same.store);
 
   const tooHigh = price.priceModel(8855, price.sanitizePricing({ ...d, appCommission: 60, appOtherFee: 30, appPromoDiscount: 30 }));
-  assertEq('tổng phí app >= 90% -> không có giá app', tooHigh.app, 0);
+  assertEq('tổng phí app + lợi nhuận >= 98% -> không có giá app', tooHigh.app, 0);
   check('cờ appValid = false khi phí app quá cao', tooHigh.appValid === false);
 
-  assertEq('roundPrice(32.836)', price.roundPrice(32836, d), 39000);
-  assertEq('roundPrice(8.500) không thấp hơn giá tối thiểu', price.roundPrice(8500, d), 9000);
-  assertEq('roundPrice(9.500)', price.roundPrice(9500, d), 19000);
-  assertEq('roundUpTo9k tương thích cũ', price.roundUpTo9k(9500), 19000);
-
-  const garbage = price.sanitizePricing({ foodCostStore: 0, profitStore: 150, roundStep: 500, roundTail: 99999, wastePct: 'abc' });
+  const garbage = price.sanitizePricing({ foodCostStore: 0, profitStore: 150, appProfit: 150, appPromoDiscount: 50, wastePct: 'abc' });
   assertEq('sanitize: Food Cost 0 -> mặc định', garbage.foodCostStore, 30);
-  assertEq('sanitize: chặn lợi nhuận 150%', garbage.profitStore, 90);
-  assertEq('sanitize: chặn bước giá quá nhỏ', garbage.roundStep, 1000);
-  assertEq('sanitize: đuôi giá phải nhỏ hơn bước', garbage.roundTail, 0);
+  assertEq('sanitize: chặn lợi nhuận quán 150%', garbage.profitStore, 95);
+  assertEq('sanitize: chặn lợi nhuận app 150%', garbage.appProfit, 95);
+  assertEq('sanitize: chặn quảng cáo 50%', garbage.appPromoDiscount, 30);
   assertEq('sanitize: hao hụt không phải số -> mặc định', garbage.wastePct, 3);
+  check('sanitize: không còn trường làm tròn', !('roundStep' in garbage) && !('roundTail' in garbage));
 
   const zero = price.suggestedMenuPrices(0);
   assertEq('giá vốn 0 -> không có giá đề xuất', zero.store + zero.foodApp, 0);
