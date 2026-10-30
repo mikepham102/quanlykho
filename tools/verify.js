@@ -146,7 +146,7 @@ if (pricingConst && pricingFns.every(Boolean)) {
   const d = price.defaultPricing();
   const m = price.priceModel(8855, d);
   assertEq('giá đề xuất tại quán (mặc định)', m.store, 30402);
-  assertEq('giá đề xuất trên app (mặc định)', m.app, 34418);
+  assertEq('giá đề xuất trên app (mặc định)', m.app, 50252);
   assertEq('chi phí/ly sau hao hụt 3%', Math.round(m.totalCost), 9121);
   assertEq('VAT 8% bóc tách từ giá quán', Math.round(m.storeVat), 2252);
   assertEq('lãi sau thuế tại quán', Math.round(m.storeProfitAfterTax), 19029);
@@ -156,10 +156,12 @@ if (pricingConst && pricingFns.every(Boolean)) {
 
   const ex = price.priceModel(5000, d);
   assertEq('ví dụ 5.000 đ (hao hụt 3%): giá quán', ex.store, 17167);
-  assertEq('ví dụ 5.000 đ (hao hụt 3%): giá app', ex.app, 19434);
+  assertEq('ví dụ 5.000 đ (hao hụt 3%): giá app', ex.app, 28375);
 
   const lowApp = price.priceModel(5000, price.sanitizePricing({ ...d, appProfit: 0 }));
-  assertEq('giá app không thấp hơn giá quán', lowApp.app, lowApp.store);
+  assertEq('giá app = giá quán ÷ (1 - phí) khi LN app thấp', lowApp.app, 28375);
+  check('giá app luôn cao hơn giá quán khi có phí', lowApp.app > lowApp.store);
+  assertEq('giá app không đổi khi hạ LN app', lowApp.app, ex.app);
 
   const vat18 = price.priceModel(8855, price.sanitizePricing({ ...d, vatPct: 18 }));
   assertEq('VAT không làm đổi giá quán', vat18.store, m.store);
@@ -181,8 +183,8 @@ if (pricingConst && pricingFns.every(Boolean)) {
   assertEq('chế độ "bằng giá quán" -> giá app = giá quán', same.app, same.store);
 
   const tooHigh = price.priceModel(8855, price.sanitizePricing({ ...d, appCommission: 60, appOtherFee: 30, appPromoDiscount: 30 }));
-  assertEq('tổng phí app + lợi nhuận >= 98% -> không có giá app', tooHigh.app, 0);
-  check('cờ appValid = false khi phí app quá cao', tooHigh.appValid === false);
+  assertEq('tổng phí app >= 70% -> không có giá app', tooHigh.app, 0);
+  check('cờ appValid = false khi phí app >= 70%', tooHigh.appValid === false);
 
   const garbage = price.sanitizePricing({ foodCostStore: 0, profitStore: 150, appProfit: 150, appPromoDiscount: 50, wastePct: 'abc' });
   assertEq('sanitize: Food Cost 0 -> mặc định', garbage.foodCostStore, 30);

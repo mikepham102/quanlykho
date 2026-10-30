@@ -591,7 +591,7 @@ function priceModel(cost,policy){
   let depPerCup=cups>0?(Number(p.depreciationMonthly)||0)/cups:0;
   let wasteCost=c*(p.wastePct/100),totalCost=c+wasteCost+opexPerCup+depPerCup;
   let m={cost:c,wasteCost,opexPerCup,depPerCup,totalCost,wastePct:p.wastePct,vatPct:p.vatPct,appMode:p.appMode,appValid:true,
-    storeFcRaw:0,storeMarginRaw:0,appProfitRaw:0,
+    storeFcRaw:0,storeMarginRaw:0,appProfitRaw:0,appFeeAddRaw:0,
     storeRaw:0,store:0,appRaw:0,app:0,storeVat:0,storeNet:0,storeProfit:0,storeProfitAfterTax:0,storeFoodCostPct:0,storeMarginPct:0,
     appFeeRate:0,appFees:0,appNet:0,appVat:0,appProfit:0,appProfitAfterTax:0,appFoodCostPct:0,appMarginPct:0};
   if(!(totalCost>0))return m;
@@ -601,12 +601,13 @@ function priceModel(cost,policy){
   m.storeMarginRaw=marginStore<.95?totalCost/(1-marginStore):0;
   m.storeRaw=Math.max(m.storeFcRaw,m.storeMarginRaw);
   m.store=Math.round(m.storeRaw);
-  // Giá app: trừ thêm phí sàn + thuế + quảng cáo (tính trên giá bán), và không thấp hơn giá quán.
+  // Giá app: cộng đủ phí sàn + thuế + quảng cáo (tính trên giá bán) lên trên giá quán,
+  // đồng thời không thấp hơn mức cần để đạt lợi nhuận app tối thiểu.
   let feeRate=Math.min(.95,Math.max(0,(p.appCommission+p.appOtherFee+p.appPromoDiscount)/100)),marginApp=Math.min(.95,Math.max(0,p.appProfit/100)),denom=1-feeRate-marginApp;
   m.appFeeRate=feeRate;
-  m.appValid=denom>.02;
+  m.appValid=feeRate<.7;
   if(p.appMode==='same')m.appRaw=m.storeRaw;
-  else if(m.appValid){m.appProfitRaw=totalCost/denom;m.appRaw=Math.max(m.storeRaw,m.appProfitRaw)}
+  else if(m.appValid){m.appFeeAddRaw=m.storeRaw/(1-feeRate);m.appProfitRaw=denom>.02?totalCost/denom:0;m.appRaw=Math.max(m.appFeeAddRaw,m.appProfitRaw||0)}
   m.app=m.appRaw>0?Math.round(m.appRaw):0;
   if(p.appMode==='same')m.app=m.store;
   let vat=p.vatPct/100;
@@ -1271,7 +1272,7 @@ function openPricingSettings(){
       pricingField('pf-comm','Phí sàn (%)',p.appCommission,'min="0" max="60" step="0.5"','Hoa hồng GrabFood / ShopeeFood / BeFood.')+
       pricingField('pf-other','Phí &amp; thuế khác trên app (%)',p.appOtherFee,'min="0" max="30" step="0.5"','Phí thanh toán, thuế sàn (ngoài quảng cáo).')+
       pricingField('pf-promo','Quảng cáo &amp; khuyến mãi (%)',p.appPromoDiscount,'min="0" max="30" step="0.5"','Quảng cáo, mã giảm giá, freeship quán tự chịu — tính trên giá bán.')+
-      pricingField('pf-appprofit','Lợi nhuận mong muốn trên app (%)',p.appProfit,'min="0" max="95" step="1"','Phần trăm trên giá bán app bạn giữ lại sau khi trừ phí sàn và giá vốn.')+
+      pricingField('pf-appprofit','Lợi nhuận mong muốn trên app (%)',p.appProfit,'min="0" max="95" step="1"','Mức tối thiểu; giá app luôn cộng đủ phí nên lợi nhuận thực thường cao hơn.')+
       '<div class="field"><label for="pf-appmode">Cách niêm yết giá app</label><select id="pf-appmode" onchange="renderPricingSim()"><option value="separate">Tính riêng (cao hơn giá tại quán)</option><option value="same">Bằng giá tại quán</option></select></div>'+
     '</div>'+
     '<p class="sub" style="margin:14px 0 0">Giá đề xuất giữ nguyên đến từng đồng, không làm tròn, để không lệch chi phí.</p>'+
@@ -1293,7 +1294,7 @@ function pricingHelpHtml(policy){
   let fee=s.appCommission+s.appOtherFee+s.appPromoDiscount;
   return '<p><b>Bước 1 — Giá vốn thật của 1 ly (K):</b> giá vốn × (1 + hao hụt) + vận hành/ly + khấu hao/ly.<br>Ví dụ vốn '+money(k)+' → K = <b>'+money(m.totalCost)+'</b>.</p>'+
     '<p><b>Bước 2 — Giá tại quán:</b> lấy mức cao hơn giữa hai điều kiện:<br>• đủ Food Cost: K ÷ '+pct(s.foodCostStore)+' = '+money(m.storeFcRaw)+'<br>• đủ lợi nhuận: K ÷ (1 − '+pct(s.profitStore)+') = '+money(m.storeMarginRaw)+'<br>→ <b>'+money(m.store)+'</b> (giá vốn thực '+pct(m.storeFoodCostPct)+', lợi nhuận thực '+pct(m.storeMarginPct)+').</p>'+
-    '<p><b>Bước 3 — Giá trên app:</b> phí sàn '+pct(s.appCommission)+' + phí khác '+pct(s.appOtherFee)+' + quảng cáo '+pct(s.appPromoDiscount)+' = <b>'+pct(fee)+'</b>; cần đủ lợi nhuận '+pct(s.appProfit)+'.<br>K ÷ (1 − '+pct(fee)+' − '+pct(s.appProfit)+') = '+money(m.appProfitRaw)+', không thấp hơn giá quán → <b>'+money(m.app)+'</b> (lợi nhuận thực '+pct(m.appMarginPct)+').</p>'+
+    '<p><b>Bước 3 — Giá trên app:</b> phí sàn '+pct(s.appCommission)+' + phí khác '+pct(s.appOtherFee)+' + quảng cáo '+pct(s.appPromoDiscount)+' = <b>'+pct(fee)+'</b>.<br>Giá quán ÷ (1 − '+pct(fee)+') = '+money(m.appFeeAddRaw)+' (cộng đủ phí).<br>Mức đủ lợi nhuận '+pct(s.appProfit)+': K ÷ (1 − '+pct(fee)+' − '+pct(s.appProfit)+') = '+money(m.appProfitRaw)+'.<br>Lấy mức cao hơn → <b>'+money(m.app)+'</b> (lợi nhuận thực '+pct(m.appMarginPct)+').</p>'+
     '<p><b>Bước 4 — VAT:</b> chỉ bóc tách để xem lãi sau thuế, không cộng vào giá. Giá giữ nguyên đến từng đồng, không làm tròn.</p>'+
     '<p class="muted">“Lợi nhuận” luôn tính trên giá bán: (giá − giá vốn − phí) ÷ giá.</p>'
 }
@@ -1309,13 +1310,12 @@ function renderPricingSim(){
   let pct=v=>priceNum(Math.round((Number(v)||0)*10)/10)+'%';
   let line=(label,value,cls)=>'<div class="price-sim-line'+(cls?' '+cls:'')+'"><span>'+label+'</span><span>'+value+'</span></div>';
   let feeSum=p.appCommission+p.appOtherFee+p.appPromoDiscount;
-  let pFc=Math.min(.95,Math.max(.05,p.foodCostStore/100)),minAppMargin=Math.max(0,1-Math.min(.95,feeSum/100)-pFc),appFloored=Boolean(m.app&&m.app<=m.store&&p.appMode!=='same');
   let warn=[];
-  if(!m.appValid)warn.push('Tổng phí app + lợi nhuận app đang từ 98% trở lên nên không còn chỗ cho giá vốn — không tính được giá app.');
+  if(!m.appValid)warn.push('Tổng phí app đang từ 70% trở lên nên giá app bị đẩy quá cao — không tính được giá app.');
   if(!(p.cupsMonthly>0)&&(p.opexMonthly>0||p.depreciationMonthly>0))warn.push('Chưa nhập số ly dự kiến/tháng nên chi phí vận hành và khấu hao chưa được chia vào giá.');
   if(!(sample>0))warn.push('Nhập giá vốn 1 ly để xem mô phỏng.');
   if(m.store&&m.storeFoodCostPct>p.foodCostStore+0.05)warn.push('Giá quán đang có giá vốn '+pct(m.storeFoodCostPct)+', vượt mục tiêu '+pct(p.foodCostStore)+' — nên tăng lợi nhuận mong muốn.');
-  if(appFloored)warn.push('Giá app đang bằng giá quán. Cần lợi nhuận app trên '+pct(minAppMargin*100)+' (hoặc nhập đủ phí sàn + quảng cáo) thì giá app mới cao hơn.');
+  if(p.appMode==='separate'&&m.app&&m.app<=m.store)warn.push('Chưa có phí app nên giá app đang bằng giá quán — nhập phí sàn/thuế/quảng cáo để giá app cao hơn.');
   box.innerHTML='<div class="price-sim-row">'+
     '<div class="price-sim-card"><h4>Cơ cấu chi phí 1 ly</h4>'+
       line('Giá vốn nguyên liệu',money(m.cost))+
@@ -1333,8 +1333,7 @@ function renderPricingSim(){
       line('Lãi sau thuế (trừ VAT)',money(m.storeProfitAfterTax))+
     '</div>'+
     '<div class="price-sim-card"><h4>Trên app giao hàng</h4><div class="big">'+(m.app?money(m.app):'—')+'</div>'+
-      (p.appMode==='same'?line('Bằng giá tại quán','✓'):(m.app<=m.store?line('Giữ sàn giá quán','✓'):line('Theo lợi nhuận app',money(m.appProfitRaw)+' ✓')))+
-      (appFloored?line('LN app tối thiểu để app &gt; quán',pct(minAppMargin*100)):'')+
+      (p.appMode==='same'?line('Bằng giá tại quán','✓'):line('Giá quán + đủ phí',money(m.appFeeAddRaw)+(m.appRaw<=m.appFeeAddRaw+1e-6?' ✓':''))+(m.appProfitRaw>0?line('Mức đủ LN app tối thiểu',money(m.appProfitRaw)+(m.appProfitRaw>m.appFeeAddRaw?' ✓':'')):''))+
       line('Phí sàn + thuế + quảng cáo',pct(feeSum))+
       line('Tiền phí phải trả',money(m.appFees))+
       line('Lợi nhuận thực',pct(m.appMarginPct))+
@@ -1344,12 +1343,13 @@ function renderPricingSim(){
     '</div>'+
   '</div>'+
   (warn.length?'<div class="notice" style="margin:0">'+warn.join('<br>')+'</div>':'')+
-  '<small class="muted">Giá quán = mức cao hơn giữa “đủ Food Cost mục tiêu” và “đủ lợi nhuận mong muốn”. Giá app cộng thêm phí sàn + thuế + quảng cáo và không thấp hơn giá quán. Không làm tròn: giá giữ đến từng đồng.</small>';
+  '<small class="muted">Giá quán = mức cao hơn giữa “đủ Food Cost mục tiêu” và “đủ lợi nhuận mong muốn”. Giá app = giá quán ÷ (1 − tổng phí), và không thấp hơn mức đủ lợi nhuận app tối thiểu. Không làm tròn: giá giữ đến từng đồng.</small>';
 }
 async function savePricingSettings(){
   if(cloudMode&&cloudRole!=='owner')return toast('Chỉ chủ quán được thay đổi cấu hình giá đề xuất.');
   let raw=readPricingForm();
   let feeSum=Number(raw.appCommission)+Number(raw.appOtherFee)+Number(raw.appPromoDiscount);
+  if(feeSum>=70)return toast('Tổng phí sàn + thuế + quảng cáo phải nhỏ hơn 70%, nếu không giá app sẽ bị đẩy quá cao.');
   if(feeSum+Number(raw.appProfit)>=98)return toast('Tổng phí app + lợi nhuận app phải nhỏ hơn 98% để còn chỗ cho giá vốn.');
   if(Number(raw.profitStore)>=100)return toast('Lợi nhuận tại quán phải nhỏ hơn 100%.');
   let next=sanitizePricing(raw);
