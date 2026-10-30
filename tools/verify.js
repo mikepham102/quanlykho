@@ -327,6 +327,17 @@ check('POS bỏ qua đơn huỷ/hoàn, không bỏ nhầm “Hoàn thành”', /
 check('lưu lượt topping vào bản ghi nhập POS', /modifiers:modifierTotals/.test(src) && /cancelled:rows\.cancelled/.test(src));
 check('Cài đặt có mục Topping & tuỳ chọn POS', /openPosModifiers\(\)/.test(src) && /Topping &amp; tuỳ chọn POS/.test(src));
 
+// 9. Mẻ nấu (batch) ----------------------------------------------------------
+check(
+  'mẻ nấu có mã, sản lượng thực tế, người làm, hạn dùng',
+  /function addBatch\(/.test(src) && /function nextBatchCode\(/.test(src) && /expiresAt:/.test(src) && /operator:actorLabel\(\)/.test(src)
+);
+check(
+  'phiếu nấu và xuất nguyên liệu được gắn batchId',
+  /batchId:batch\.id/.test(src) && /batchCode:batch\.code/.test(src) && /batch\.ops=batchOpIds\(created\)/.test(src)
+);
+check('trang Công thức có bảng mẻ nấu gần đây', /id="batches-table"/.test(src) && /renderBatches\(\)/.test(src) && /id="batch-frequency"/.test(src));
+
 // In kết quả ---------------------------------------------------------------
 for (const r of results) {
   console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.detail ? '  → ' + r.detail : ''}`);
