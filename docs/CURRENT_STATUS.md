@@ -1,6 +1,6 @@
 # CURRENT STATUS — Trạng thái dự án
 
-> Cập nhật: 28/10/2026. Đây là tài liệu duy nhất ghi trạng thái; các tài liệu khác mô tả thiết kế.
+> Cập nhật: 30/10/2026. Đây là tài liệu duy nhất ghi trạng thái; các tài liệu khác mô tả thiết kế.
 
 ## 1. Sự cố đã xử lý hôm nay
 
@@ -21,7 +21,7 @@ Kiểm chứng: 7 khác biệt giữa bản hỏng và bản production đều t
 ### 2.1 Hạ tầng
 - [x] Git repository + commit baseline + commit tính năng.
 - [x] `.gitignore` (`.DS_Store`, `backups/`, `node_modules/`).
-- [x] `tools/verify.js` — 97 kiểm tra tự động, chạy bằng `node tools/verify.js` (exit code 1 nếu lỗi).
+- [x] `tools/verify.js` — 127 kiểm tra tự động, chạy bằng `node tools/verify.js` (exit code 1 nếu lỗi).
 
 ### 2.2 Sinh mã mặt hàng tự động
 - [x] `rawCodePrefix()` map danh mục → `NLTR/NLCL/NLBT/NLTP/NLTC/NLBB/NL`, so khớp theo từ (tránh nhầm "Trái cây" thành "Trà").
@@ -84,11 +84,51 @@ Kiểm chứng: 7 khác biệt giữa bản hỏng và bản production đều t
 - [x] Mẫu Excel nay **chỉ có tiêu đề**; muốn xuất kèm dữ liệu dùng “Xuất Excel” (`xuat_<nhóm>_<ngày>.xlsx`).
 - [x] Thêm hộp xác nhận trước khi nhập tệp; ghi rõ nhóm Giao dịch kho luôn ghi thêm phiếu, không gộp.
 
+### 2.10 Toàn vẹn dữ liệu (P0, 28/10)
+
+- [x] Kiểm kê không còn gán `qty` trực tiếp: mỗi dòng lệch sinh phiếu `adjust` (có dấu) + `stocktakeId`; ô trống = chưa đếm; bắt buộc ≥ 1 dòng.
+- [x] Xoá phiếu = **vô hiệu hoá** (`status:'voided'`): giữ lịch sử, tính bù tồn, không còn ảnh hưởng báo cáo. Phiếu `adjust` không thể vô hiệu.
+- [x] Xoá mặt hàng bị chặn khi đã có giao dịch; không còn sửa `audits` khi xoá.
+- [x] `save()` bắt lỗi hết dung lượng (localStorage), chặn double-submit, chống nhập trùng báo cáo POS (`strHash` + thay thế), bỏ phiếu huỷ khỏi đối soát.
+- [x] Migration `20261028`: `workspace_op_delta` hỗ trợ `adjust`/`voided`, **áp kiểm tra tồn cho cả owner**, thêm RPC `replace_workspace_state`.
+
+### 2.11 Chênh lệch theo kỳ và POS nâng cao (29/10)
+
+- [x] `theoreticalOpening()` neo tồn đầu kỳ theo lần kiểm kê gần nhất; `varianceReport(from,to)` trả đủ đầu kỳ/nhập/nấu/xuất ròng/điều chỉnh/lý thuyết/thực tế/lệch.
+- [x] Bảng chênh lệch có chọn kỳ + dòng tổng kết; `exportVariance()` tải CSV dùng **cùng** engine; đã bỏ công thức tautology và `db.audits.at(-1)`.
+- [x] `db.posModifiers` + `findPosModifier`/`modifierConsumption` (khớp tên và bí danh không dấu); nhận diện cột Size/Topping/Trạng thái.
+- [x] Dòng huỷ/hoàn bị bỏ qua theo trạng thái và theo số lượng ≤ 0; “Hoàn thành” không bị bỏ nhầm.
+- [x] Panel **So sánh xuất dùng trên app với POS** ở trang Đối soát.
+
+### 2.12 Mẻ nấu (29/10)
+
+- [x] `db.batches` + `addBatch()`/`nextBatchCode()` (mã `ME-YYYYMMDD-NNN`): sản lượng thực tế/kế hoạch, người làm, `startedAt`/`expiresAt` theo `shelf` giờ.
+- [x] Phiếu `prep` và các `stockout` khi nấu gắn `batchId`/`batchCode`.
+- [x] Bảng **Mẻ nấu gần đây** (20 mẻ) + thẻ mobile: hạn dùng, tần suất nấu hôm nay.
+
+### 2.13 Vị trí bảo quản (29/10)
+
+- [x] `db.locations` (Quầy bar/Tủ mát/Khu pha chế) + 3 loại phiếu `issue_location`/`return_location`/`use_location`.
+- [x] `item.at` là dữ liệu **dẫn xuất**, `rebuildLocationBalances()` dựng lại từ phiếu mỗi lần render.
+- [x] Bảng **Hàng ngoài kho** + nút **Quầy & tủ**; chặn dùng/trả quá số đang ở vị trí; nhân viên chỉ ghi “dùng”.
+- [x] Migration `20261029`: delta cho 3 loại phiếu, whitelist manager/employee, bỏ `at` khỏi so sánh cấu hình mặt hàng.
+
+### 2.14 Kiểm kê nháp, nhật ký, thẻ đối soát (30/10)
+
+- [x] `saveStocktake(draft)` tách khỏi `saveForm`: **Lưu nháp** không đổi tồn, không tạo phiếu; `approveStocktake()` chốt → sinh `adjust` theo tồn hiện tại và cảnh báo mặt hàng đã đổi từ lúc đếm; `deleteStocktake()` chỉ xoá nháp.
+- [x] Bảng **Phiếu kiểm kê** (thiếu/thừa/trạng thái) + thẻ mobile; nút Chốt/Xoá cho phiếu nháp.
+- [x] `db.auditTrail` + `logConfig()` cho mặt hàng/BTP/món POS/giá/vị trí/tuỳ chọn POS/vô hiệu hoá phiếu/chốt kiểm kê; xem ở Cài đặt → **Lịch sử thay đổi**.
+- [x] Thẻ **Đối soát kiểm kê** trên dashboard (`renderReconCard`).
+- [x] Migration `20261030`: non-owner chỉ thêm phiếu audit `draft` của chính mình, `audits` được giữ khi lưu.
+
 ## 3. Kết quả kiểm thử
 
 | Hạng mục | Kết quả |
 |---|---|
-| `node tools/verify.js` | **97/97 PASS** |
+| `node tools/verify.js` | **127/127 PASS** |
+| Chrome headless 30/10, chế độ local `file://` | 6 trang render, 1 trang active, không lỗi console (chỉ CORS manifest) |
+| Chrome headless 30/10, `http://` với config rỗng | Hiện đúng màn hình khoá “Chưa cấu hình dữ liệu dùng chung” |
+| Bản GitHub Pages so với máy | `index.html` giống hệt, `CACHE=v22` |
 | Test đơn vị hàm sinh mã (13 danh mục + 4 mã kế tiếp) | PASS |
 | Chrome headless, chế độ local | 6 trang render, không lỗi console |
 | Mở form thêm mới | `NL008` (seed có `NL001–NL007`) |
@@ -127,9 +167,11 @@ Kiểm chứng: 7 khác biệt giữa bản hỏng và bản production đều t
 
 ## 4. Vấn đề đã biết
 
+> Trạng thái 30/10: chủ dự án xác nhận **đã áp đủ** migration 20261029 + 20261030. Vì vậy #19 và #21 **đang là lỗi thật trên bản chạy**, không còn là giả định; #18 và #20 cũng đang mở.
+
 | # | Vấn đề | Mức độ | Ghi chú |
 |---|---|---|---|
-| 1 | Toàn bộ app trong một `index.html` ~266 KB | Cao | Sửa dễ hỏng; đã có git + `verify.js` giảm rủi ro. Đề xuất tách `app.js`/`styles.css`. |
+| 1 | Toàn bộ app trong một `index.html` ~311 KB (300.132 ký tự, 219 hàm) | Cao | Sửa dễ hỏng; đã có git + `verify.js` 127 mục giảm rủi ro. Đề xuất tách `app.js`/`styles.css`. |
 | 2 | Chưa có test tự động cho luồng UI (chỉ harness tạm) | Trung bình | Có thể thêm Playwright sau khi tách tệp. |
 | 3 | Mã hàng cũ (`NL001–NL007`, `TS001`) không theo prefix mới | Thấp | Tồn tại song song; mã cũ giữ nguyên, mặt hàng mới dùng prefix mới. |
 | 4 | Không cấu hình được prefix trong Cài đặt | Thấp | Hiện là hằng số trong code; nếu cần, lưu vào `db.settings` (chưa có). |
@@ -144,25 +186,44 @@ Kiểm chứng: 7 khác biệt giữa bản hỏng và bản production đều t
 | 13 | Khoá zoom là đánh đổi accessibility | Trung bình | Bù bằng nền 16px, 3 mức cỡ chữ trong menu tài khoản và ô nhập 16px. |
 | 14 | Chưa test trên máy thật (iOS/Android) | Cao | Mới kiểm bằng Chrome headless với iframe 390×844; cần chạy mục 4.6 của `TEST_PLAN.md` trước khi phát hành. |
 | 15 | Chưa có mẫu Excel nhập **kiểm kê (audit)** | Trung bình | Kiểm kê chỉ nhập qua form; muốn nhập số đếm hàng loạt phải bổ sung template + parser. |
-| 16 | Chưa có nhật ký thay đổi cấu hình | Thấp | Chỉ phiếu kho có `createdBy`; sửa giá/BOM không lưu lại ai sửa, khi nào. |
+| 16 | Nhật ký thay đổi chỉ giữ 300 dòng, không xuất được | Thấp | Có từ 30/10 (`db.auditTrail`), nhưng cắt còn 300 và chỉ hiện 100 dòng; chưa có xuất CSV để lưu trữ lâu dài. |
 | 17 | Nhóm **Giao dịch kho** không gộp khi nhập lại | Trung bình | Mỗi lần nhập là ghi thêm phiếu; đã ghi rõ trong UI, muốn đúng trạng thái cũ thì khôi phục JSON. |
+| 18 | **XSS lưu trữ**: ghi chú phiếu (`op.ref`) và tên mặt hàng được chèn thô vào `innerHTML` | **Cao** | Nhân viên gõ `<img onerror=…>` vào “Lý do xuất”, chủ quán mở Phiếu kho là script chạy bằng phiên owner (đọc/sửa toàn bộ kho, mời tài khoản). Đã có `xEsc()` nhưng chỉ dùng 3 chỗ. |
+| 19 | **Non-owner không lưu được sau khi có phiếu kiểm kê** (chỉ sau khi áp migration 20261030) | **Cao** | `load_workspace_state` vẫn trả `audits:[]` cho manager/employee, còn `save_workspace_state` bắt buộc giữ đủ phiếu audit cũ ⇒ mọi lần lưu của nhân viên bị từ chối, poll 15s xoá thay đổi. Phải sửa trước/sau khi áp 20261030. |
+| 20 | Lưu cloud lỗi bị **poll 15s ghi đè** thay đổi chưa đồng bộ | Cao | `refreshCloudWorkspace` thay cả `db` khi revision server cao hơn, không có cờ “đang có thay đổi chưa gửi” ⇒ mất phiếu vừa nhập nếu mạng chập chờn/conflict. |
+| 21 | Mẻ nấu của non-owner bị server bỏ im lặng | Trung bình | Server chỉ merge `ops`/`items`/`audits`; `batches` do nhân viên tạo bị mất ⇒ phiếu có `batchId` trỏ tới mẻ không tồn tại, mất hạn dùng. |
+| 22 | Phiếu kiểm kê **nháp** vẫn được dùng làm mốc tính tồn/chênh lệch | Trung bình | `theoreticalOpening`/`varianceReport` không lọc `status:'draft'` ⇒ báo cáo lệch ngay cả khi chưa chốt. |
+| 23 | Chốt phiếu nháp ghi đè giao dịch phát sinh sau lúc đếm | Trung bình | `approveStocktake` đặt `qty = counts` tuyệt đối, chỉ cảnh báo sau khi đã lưu ⇒ hàng bán trong khoảng đếm→chốt bị xoá khỏi tồn. Nên chặn khi có thay đổi. |
+| 24 | Ô “Tồn hiện tại” trong form mặt hàng sửa kho trực tiếp | Trung bình | Cloud: RPC từ chối (“Số tồn chỉ được thay đổi theo phiếu kho”) nhưng giao diện đã hiện số mới, 15s sau quay lại ⇒ tưởng đã lưu. Local: sai lịch sử, không sinh `adjust`. |
+| 25 | Khôi phục JSON cũ bị từ chối vì `_revision` | Trung bình | `replace_workspace_state` đòi `_revision` khớp bản đang lưu; bản sao lưu từ hôm trước không khôi phục được. Chỉ khôi phục được bản vừa xuất. |
+| 26 | Server chưa chặn manager sửa/xoá phiếu cũ | Trung bình | Chỉ kiểm phiếu mới/phiếu bị đổi; phiếu bị xoá khỏi mảng (kèm sửa `qty`) lọt qua ⇒ mất dấu vết thay vì `voided`. Chốt ca (`return+waste ≤ issue`) cũng chỉ kiểm ở client. |
+| 27 | Dashboard lấy “Món bán hôm nay” theo ngày UTC | Thấp | 00:00–06:59 giờ VN hiển thị số của hôm trước (`toISOString()`), lệch với ngày nghiệp vụ. |
+| 28 | `item.at` không được server kiểm tra | Thấp | Chỉ là dữ liệu dẫn xuất và luôn được dựng lại ở client, nhưng một client lỗi có thể lưu `at` sai cho tới lần render sau. |
+| 29 | Migration: **đã áp đủ** 20261029 + 20261030 (chủ dự án xác nhận 30/10) | Đã đóng | Nhờ vậy phiếu vị trí và kiểm kê nháp chạy được, nhưng #19 và #21 trở thành lỗi thật. Cần chạy `TEST_PLAN.md` 4.1 + 4.8–4.13 với cả 3 vai trò để xác nhận trên dữ liệu thật. |
 
 ## 5. Việc tiếp theo (ưu tiên)
 
 ### P0 — Trước khi phát hành bản mới
-1. `git push` lên `main` để GitHub Actions deploy.
-2. Mở bản GitHub Pages trên điện thoại, kiểm tra service worker nhận `v17` (tải lại 2 lần nếu còn cache).
-3. Đăng nhập chủ quán, chạy checklist thủ công trong `TEST_PLAN.md` mục 4.
+1. **Sửa #19** (mask `audits` trong `load_workspace_state`): migration 20261030 đã áp ⇒ kể từ khi có **một** phiếu kiểm kê, mọi lần lưu của quản lý/nhân viên bị server từ chối. Đây là việc gấp nhất; nếu chưa sửa, nên tạm chỉ dùng tài khoản chủ quán để ghi phiếu.
+2. **Sửa #18** (escape `o.ref`, `o.name`, email, tên hàng… ở mọi sink `innerHTML`) vì đây là lỗ hổng cho phép nhân viên chạy script trong phiên chủ quán.
+3. Đăng nhập **cả 3 vai trò**, lưu thử một phiếu mỗi loại **sau khi** đã có một phiếu kiểm kê, để xác nhận #19 đã hết.
+4. `git push` lên `main` để GitHub Actions deploy; mở bản GitHub Pages trên điện thoại, tải lại 2 lần để nhận `CACHE` mới.
+5. Chạy checklist thủ công `TEST_PLAN.md` mục 4 (tối thiểu 4.1, 4.8–4.13).
 
 ### P1 — Ổn định
-4. Tách `index.html` thành `styles.css`, `app.js`, `index.html` (giữ nguyên hành vi, kiểm tra bằng `tools/verify.js`).
-5. Thêm test tự động cho `saveForm` bằng Playwright.
-6. Cho phép cấu hình prefix trong Cài đặt (lưu vào `db.settings.prefixes`).
+6. **Sửa #20**: thêm cờ “có thay đổi chưa gửi”, tạm dừng poll khi lưu lỗi, chỉ xoá payload khi RPC thành công.
+7. **Sửa #21** (merge `batches` cho non-owner) và **#22/#23** (lọc audit nháp, chặn chốt khi tồn đã đổi).
+8. **Sửa #25** (khôi phục JSON: dùng `_revision` hiện tại, validate `Array.isArray`) — nếu không, sao lưu cũ không dùng được đúng lúc cần nhất.
+9. **Sửa #24** (ô tồn trong form mặt hàng chỉ đọc khi sửa) và **#26** (server chặn manager xoá phiếu cũ, kiểm chốt ca ở SQL).
+10. Tách `index.html` thành `styles.css`, `app.js`, `index.html` (giữ nguyên hành vi, kiểm tra bằng `tools/verify.js`).
+11. Thêm test tự động cho `saveForm` bằng Playwright.
+12. Cho phép cấu hình prefix trong Cài đặt (lưu vào `db.settings.prefixes`).
 
 ### P2 — Tính năng
-7. Đồng nhất thương hiệu (title, manifest, logo mặc định).
-8. Cảnh báo BTP sắp hết hạn dùng theo `shelf`.
-9. Xuất báo cáo đối soát ra Excel.
+13. Đồng nhất thương hiệu (`<title>` “HongCha — Quản lý kho” vs brand “MỘC INVENTORY”, manifest, logo mặc định).
+14. Cảnh báo BTP sắp hết hạn trên dashboard (bảng mẻ nấu đã có hạn dùng, nhưng chưa có cảnh báo chủ động).
+15. Xuất báo cáo đối soát ra Excel.
+16. Dọn dữ liệu cũ: giới hạn số phiếu/imports, hoặc xuất lưu trữ theo năm — workspace là **một** JSONB nên phình dần.
 
 ## 6. Cách khôi phục khi có sự cố
 
@@ -175,3 +236,5 @@ node tools/verify.js         # kiểm tra lại
 ```
 
 Bản production cũ luôn có tại `backups/index.html.prod-20261028`.
+
+> Khôi phục **dữ liệu** (JSON trong Cài đặt) là việc khác: hiện chỉ khôi phục được bản có `_revision` trùng bản đang lưu (xem #25). Trước khi khôi phục, luôn xuất JSON hiện tại để có đường lùi.

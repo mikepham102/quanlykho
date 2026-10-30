@@ -1,6 +1,6 @@
 # DATABASE SCHEMA — Mô hình dữ liệu thật
 
-> Cập nhật: 28/10/2026. Nguồn sự thật: `index.html` + `supabase/migrations/20261020_accounts_and_workspace.sql`.
+> Cập nhật: 30/10/2026. Nguồn sự thật: `index.html` + migration mới nhất `supabase/migrations/20261030_stocktake_drafts.sql`.
 
 ## 1. Bảng trên Supabase
 
@@ -32,9 +32,19 @@ Dùng cho phân quyền. RLS bật; người dùng chỉ đọc được hồ s�
 |---|---|---|
 | `current_workspace_role` | — | Vai trò của người đang đăng nhập. |
 | `load_workspace_state` | — | `jsonb` state hiện tại (hoặc rỗng nếu chưa có). |
-| `save_workspace_state` | `p_state jsonb` | Số revision mới; lỗi nếu sai quyền hoặc revision cũ. |
+| `save_workspace_state` | `p_state jsonb` | Số revision mới; lỗi nếu sai quyền, revision cũ, phiếu không hợp lệ hoặc tồn lệch khỏi tổng phiếu. |
+| `replace_workspace_state` | `p_state jsonb` | Số revision mới; **chỉ owner**, dùng khi khôi phục JSON, ghi thêm `_restoredBy`/`_restoredAt`. |
 | `list_workspace_users` | — | Danh sách hồ sơ (chỉ chủ quán). |
 | `change_workspace_role` | `p_user_id`, `p_role` | Cập nhật vai trò (chỉ chủ quán). |
+
+`workspace_op_delta(jsonb)` không phải RPC cho client: là hàm SQL tính tác động tồn của một phiếu, dùng bên trong `save_workspace_state`.
+
+Các bất biến server thực thi trong `save_workspace_state` (áp cho **mọi** vai trò, kể cả owner):
+
+1. `_revision` phải khớp bản đang lưu (chống ghi đè).
+2. `items`/`ops` phải là mảng.
+3. `qty` của từng mặt hàng phải bằng `qty cũ + tổng chênh lệch phiếu` (sai số 0,000001); Δ âm làm tồn < 0 bị chặn.
+4. Với non-owner: mọi trường của `items` trừ `qty`/`at` không được đổi; `ops` chỉ được thêm phiếu đúng loại và đúng nhóm hàng; `audits` chỉ được thêm phiếu `draft` do chính mình tạo; các khóa khác lấy từ bản cũ trên server.
 
 Edge Function `invite-user` tạo tài khoản; chỉ nơi đây dùng `service_role`.
 
@@ -42,18 +52,24 @@ Edge Function `invite-user` tạo tài khoản; chỉ nơi đây dùng `service_
 
 ```jsonc
 {
-  "brand":      { "name": "Mộc Inventory", "branch": "…", "logo": "data:image/…" },
-  "pricing":    Pricing,         // cấu hình giá đề xuất (mục 2.1)
-  "items":      [ Item ],        // nguyên liệu thô + bán thành phẩm
-  "pos":        [ Dish ],        // món bán trên POS
-  "ops":        [ Operation ],   // sổ phiếu kho
-  "imports":    [ PosImport ],   // file POS đã nhập
-  "audits":     [ Audit ],       // các lần kiểm kê
-  "suppliers":  [ "string" ],
-  "categories": [ "string" ],
-  "favorites":  { "raw": ["id"], "prep": ["id"] },
-  "periodStart": 1761000000000,  // mốc bắt đầu kỳ báo cáo
-  "_revision":   42
+  "brand":        { "name": "Mộc Inventory", "branch": "…", "logo": "data:image/…" },
+  "pricing":      Pricing,        // cấu hình giá đề xuất (xem mục Pricing bên dưới)
+  "items":        [ Item ],       // nguyên liệu thô + bán thành phẩm
+  "pos":          [ Dish ],       // món bán trên POS
+  "ops":          [ Operation ],  // sổ phiếu kho
+  "imports":      [ PosImport ],  // file POS đã nhập
+  "audits":       [ Audit ],      // các lần kiểm kê (draft | approved)
+  "locations":    [ { "id": "loc_bar", "name": "Quầy bar" } ],
+  "batches":      [ Batch ],      // mẻ nấu
+  "posModifiers": [ PosModifier ],// topping / tuỳ chọn POS
+  "auditTrail":   [ AuditLog ],   // nhật ký thay đổi cấu hình
+  "suppliers":    [ "string" ],
+  "categories":   [ "string" ],
+  "favorites":    { "raw": ["id"], "prep": ["id"] },
+  "periodStart":  1761000000000,  // mốc bắt đầu kỳ báo cáo
+  "_revision":    42,
+  "_restoredBy":  "uuid",         // chỉ có sau khi khôi phục JSON qua replace_workspace_state
+  "_restoredAt":  "2026-10-30T…"
 }
 ```
 
@@ -98,7 +114,8 @@ Edge Function `invite-user` tạo tài khoản; chỉ nơi đây dùng `service_
   "conversionQty": 750,     // tùy chọn: số đơn vị dùng trên 1 đơn vị kho
   "shelf": 24,              // prep: hạn dùng (giờ)
   "outputQty": 2000,        // prep: sản lượng 1 mẻ
-  "recipe": [ { "item": "itemId", "qty": 200 } ]  // prep: nguyên liệu cho 1 mẻ
+  "recipe": [ { "item": "itemId", "qty": 200 } ], // prep: nguyên liệu cho 1 mẻ
+  "at": { "loc_bar": 300 }  // số đang ở quầy/tủ — DẪN XUẤT từ phiếu, không phải tồn
 }
 ```
 
@@ -127,11 +144,26 @@ Quy ước đơn vị: nếu có `conversionUnit`/`conversionQty`, BOM ghi theo 
   "date": "2026-10-28T03:12:00.000Z",
   "name": "Trà đen · Nhập hàng",
   "qty": "+ 500 g",         // chuỗi hiển thị
-  "rawQty": 500,            // số dùng để tính toán
+  "rawQty": 500,            // số dùng để tính toán (adjust: có dấu)
   "itemId": "uuid",
   "ref": "Nhà cung cấp A",
   "createdBy": "uuid",      // gắn tự động khi đồng bộ
-  "createdByEmail": "a@b.c"
+  "createdByEmail": "a@b.c",
+
+  // tuỳ chọn theo loại nghiệp vụ
+  "locationId": "loc_bar",  // phiếu vị trí
+  "batchId": "uuid",        // phiếu nấu / xuất nguyên liệu của một mẻ
+  "batchCode": "ME-20261030-001",
+  "stocktakeId": "uuid",    // phiếu adjust sinh từ kiểm kê
+
+  // vết sửa / huỷ
+  "status": "voided",       // vắng mặt = hiệu lực
+  "voidedAt": "2026-10-30T…",
+  "voidedBy": "email",
+  "voidReason": "Người dùng vô hiệu hoá phiếu",
+  "editedAt": "2026-10-30T…",
+  "editedBy": "email",
+  "history": [ { "at": "…", "by": "email", "before": { "rawQty": 400 } } ]
 }
 ```
 
@@ -144,6 +176,12 @@ Quy ước đơn vị: nếu có `conversionUnit`/`conversionQty`, BOM ghi theo 
 | `sale_return` | Thu hồi cuối ca | `+ rawQty` |
 | `sale_waste` | Hủy cuối ca | `0` (đã trừ lúc `sale_issue`) |
 | `waste` | Hao hụt | `− rawQty` |
+| `adjust` | Điều chỉnh kiểm kê | `+ rawQty` (có dấu; thiếu = âm) |
+| `issue_location` | Xuất ra quầy/tủ | `− rawQty` (đồng thời `+` tại vị trí) |
+| `return_location` | Trả từ quầy/tủ về kho | `+ rawQty` (đồng thời `−` tại vị trí) |
+| `use_location` | Dùng tại quầy/tủ | `0` (chỉ `−` tại vị trí) |
+
+Phiếu có `status:'voided'` được `workspace_op_delta` trả về `0`, nên không còn tác động tồn dù vẫn nằm trong lịch sử. `adjust` không thể bị vô hiệu hoá.
 
 ### `PosImport`
 
@@ -160,7 +198,11 @@ Quy ước đơn vị: nếu có `conversionUnit`/`conversionQty`, BOM ghi theo 
   "unmappedRows": [ { "name": "…", "qty": 3 } ],
   "consumptions": { "itemId": 1250.5 },  // tiêu thụ lý thuyết theo đơn vị kho
   "consumptionUnit": "stock",
-  "rows": [ { "name": "…", "code": "…", "qty": 10 } ]
+  "rows": [ { "name": "…", "code": "…", "size": "L", "mods": "Trân châu", "qty": 10 } ],
+  "cancelled": 3,                   // số dòng bị bỏ vì trạng thái huỷ hoặc số lượng âm
+  "modifiers": { "Trân châu": 12 }, // số lượt topping đã khớp
+  "modifierMissing": [ "Thạch dừa" ],// topping không khớp db.posModifiers
+  "hash": "…"                       // strHash để phát hiện nhập trùng
 }
 ```
 
@@ -170,14 +212,71 @@ Nhập POS **không** thay đổi tồn kho; chỉ dùng để đối soát.
 
 ```jsonc
 {
-  "date": "2026-10-28T14:00:00.000Z",
-  "counts": { "itemId": 1234 },   // số đếm thực tế
-  "system": { "itemId": 1200 },   // số hệ thống trước kiểm kê
-  "note": "Kiểm kê cuối ngày"
+  "id": "uuid",                     // dùng làm stocktakeId
+  "date": "2026-10-30T14:00:00.000Z",
+  "counts": { "itemId": 1234 },     // số đếm thực tế (ô trống = không có khóa)
+  "system": { "itemId": 1200 },     // tồn tại đúng lúc đếm
+  "counted": { "itemId": true },
+  "note": "Kiểm kê cuối ngày",
+  "adjustments": [ { "itemId": "uuid", "delta": 34 } ], // tổng hợp, chi tiết nằm ở phiếu adjust
+  "operator": "email",
+  "status": "draft",                // "draft" | "approved"
+  "createdBy": "uuid",
+  "approvedAt": "2026-10-30T…",     // null khi còn nháp
+  "approvedBy": "uuid"
 }
 ```
 
-Lưu kiểm kê sẽ ghi đè `qty` bằng số thực tế và đặt lại `periodStart`.
+- `draft` **không** đổi tồn và **không** tạo phiếu. Chốt phiếu sinh một phiếu `adjust` cho mỗi dòng lệch (xem mục Operation) và đặt `periodStart = now`.
+- Giao diện hiện chỉ mở kiểm kê cho owner; server (migration 20261030) cho non-owner thêm `draft` của chính mình nhưng không sửa/xoá phiếu đã có.
+
+### `Batch` (mẻ nấu)
+
+```jsonc
+{
+  "id": "uuid",
+  "code": "ME-20261030-001",     // nextBatchCode: ME-YYYYMMDD-NNN
+  "prepItemId": "uuid",
+  "prepName": "Trà sữa nền",
+  "unit": "ml",
+  "actualQty": 1950,             // sản lượng thực tế
+  "plannedQty": 2000,            // sản lượng theo công thức
+  "day": "2026-10-30",
+  "startedAt": "2026-10-30T01:00:00.000Z",
+  "expiresAt": "2026-10-31T01:00:00.000Z", // startedAt + shelf giờ
+  "shelfHours": 24,
+  "operator": "email",
+  "note": "",
+  "consumption": [ { "itemId": "uuid", "qty": 300 } ], // nguyên liệu đã dùng (đơn vị kho)
+  "ops": [ "opId" ]
+}
+```
+
+### `PosModifier` (topping / tuỳ chọn POS)
+
+```jsonc
+{
+  "id": "uuid",
+  "name": "Trân châu",
+  "aliases": [ "tran chau", "TC" ],
+  "itemId": "uuid",   // mặt hàng bị trừ khi bán món có topping này
+  "qty": 30           // định lượng mỗi lượt, theo đơn vị dùng của mặt hàng
+}
+```
+
+### `AuditLog` (nhật ký thay đổi cấu hình)
+
+```jsonc
+{
+  "id": "uuid",
+  "at": "2026-10-30T…",
+  "by": "email",              // actorLabel()
+  "action": "Cập nhật cấu hình giá",
+  "detail": "Food Cost 30% → 25%"
+}
+```
+
+Tối đa 300 dòng, mới nhất ở đầu; xem 100 dòng gần nhất ở Cài đặt → Lịch sử thay đổi. Không ghi thay đổi tồn (đã có `ops`).
 
 ## 3. Ràng buộc dữ liệu
 
@@ -185,9 +284,14 @@ Lưu kiểm kê sẽ ghi đè `qty` bằng số thực tế và đặt lại `pe
 |---|---|
 | `items[].code` duy nhất (không phân biệt hoa/thường) | `saveForm` (client) |
 | `pos[].code` duy nhất sau `normalizePosKey` | `saveForm` (client) |
-| Không cho tồn âm khi xuất/nấu/hủy/sửa/xóa phiếu | `saveForm`, `saveOperationEdit`, `deleteOperation` |
-| `sale_return + sale_waste ≤ sale_issue` theo `day|itemId` | `validateOperationClosures` |
+| `qty = tồn cũ + tổng chênh lệch phiếu`, sai số 0,000001 | **RPC** `save_workspace_state` (mọi vai trò) |
+| Không cho tồn âm khi xuất/nấu/hủy/vô hiệu hoá phiếu | client + RPC |
+| Không dùng/trả quá số đang ở vị trí; xuất ra vị trí ≤ tồn | `saveForm` (client) |
+| `sale_return + sale_waste ≤ sale_issue` theo `day|itemId` | `validateOperationClosures` (client) |
+| Phiếu `adjust` không được vô hiệu hoá | `deleteOperation` (client) |
+| Non-owner không đổi cấu hình `items`, chỉ thêm phiếu đúng loại | **RPC** |
+| Non-owner chỉ thêm `audit` `draft` của chính mình | **RPC** (migration 20261030) |
 | `db.pricing` trong khoảng hợp lệ, đuôi giá < bước giá | `sanitizePricing`, `savePricingSettings` (client) |
-| Revision khi ghi cloud | RPC `save_workspace_state` |
+| Revision khi ghi cloud / khôi phục | **RPC** `save_workspace_state`, `replace_workspace_state` |
 
-Server chỉ kiểm tra **quyền** và **revision**, không kiểm tra hình dạng JSON. Vì vậy mọi bất biến nghiệp vụ nằm ở client; nhập liệu sai qua SQL sẽ không được phát hiện.
+Server **không** kiểm tra hình dạng đầy đủ của JSON: tên, đơn vị, giá, BOM, `at`, `batches`, `posModifiers`, `auditTrail` do client ghi. Với owner, server giữ nguyên toàn bộ; với **non-owner**, server chỉ merge `ops`/`items`/`audits` nên `batches` (và `auditTrail`) do vai trò đó tạo sẽ bị bỏ — xem `CURRENT_STATUS.md` #21. Vì vậy dữ liệu cấu hình sai vẫn có thể lọt qua nếu sửa trực tiếp bằng SQL hoặc bằng console của owner; chỉ **tồn kho và quyền** được bảo vệ ở server.

@@ -1,6 +1,6 @@
 # ARCHITECTURE — Kiến trúc thực tế
 
-> Cập nhật: 28/10/2026.
+> Cập nhật: 30/10/2026.
 
 ## 1. Sơ đồ tổng thể
 
@@ -19,8 +19,8 @@ Supabase
 ┌──────────────────────────────────────────────────────────┐
 │ Auth: đăng nhập email/mật khẩu, reset password           │
 │ RPC:  current_workspace_role, load_workspace_state,      │
-│       save_workspace_state, list_workspace_users,        │
-│       change_workspace_role                              │
+│       save_workspace_state, replace_workspace_state,     │
+│       list_workspace_users, change_workspace_role        │
 │ Bảng: profiles (vai trò), workspace_state (JSONB)        │
 │ Edge Function: invite-user (dùng service_role ở server)  │
 └──────────────────────────────────────────────────────────┘
@@ -39,9 +39,15 @@ Không có server ứng dụng riêng, không có build, không có bundler.
 | `schema.sql` | Mô hình quan hệ tham khảo ban đầu — **không được chạy**, app không dùng. |
 | `supabase/migrations/20261020_accounts_and_workspace.sql` | Tạo `profiles`, `workspace_state`, RLS và các RPC. Bắt buộc chạy. |
 | `supabase/migrations/20261021_backfill_existing_user_profiles.sql` | Bổ sung hồ sơ vai trò cho tài khoản tạo trước migration. |
+| `supabase/migrations/20261028_integrity_audit_adjust.sql` | Phiếu `adjust`/`voided`, kiểm tra tồn cho mọi vai trò, RPC `replace_workspace_state`. Bắt buộc chạy. |
+| `supabase/migrations/20261029_locations.sql` | Delta cho phiếu vị trí (`issue_location`, `return_location`, `use_location`), whitelist phiếu cho quản lý/nhân viên. Bắt buộc chạy. |
+| `supabase/migrations/20261030_stocktake_drafts.sql` | Non-owner chỉ thêm được phiếu kiểm kê **nháp** của mình; `audits` được giữ khi lưu. Bắt buộc chạy. |
 | `supabase/functions/invite-user/index.ts` | Edge Function mời tài khoản. |
+| `tools/verify.js` | Kiểm tra tự động 127 mục, không cần cài thêm gói. |
 | `.github/workflows/deploy.yml` | Deploy GitHub Pages khi push `main`. |
 | `docs/` | Tài liệu. `docs/_PENDING.md` là sổ ghi thay đổi chờ chốt vào tài liệu. `backups/` (không commit) chứa bản sao lưu `index.html`. |
+
+> Thứ tự áp migration: 20261020 → 20261021 → 20261028 → 20261029 → 20261030. Ba migration cuối `create or replace` cùng các hàm nên **file sau thắng**; áp thiếu file cuối sẽ khiến phiếu vị trí hoặc phiếu kiểm kê nháp bị server từ chối.
 
 ## 3. Mô hình dữ liệu trong RAM
 
@@ -51,18 +57,26 @@ Không có server ứng dụng riêng, không có build, không có bundler.
 db = {
   brand:        { name, branch, logo },
   pricing:      { …cấu hình giá đề xuất… },
-  items:        [ item ],
+  items:        [ item ],          // item.at = số dư tại từng vị trí (dữ liệu dẫn xuất)
   pos:          [ dish ],
   ops:          [ operation ],
   imports:      [ posImport ],
-  audits:       [ audit ],
+  audits:       [ audit ],         // kiểm kê: draft | approved
+  locations:    [ { id, name } ],
+  batches:      [ batch ],         // mẻ nấu
+  posModifiers: [ { id, name, aliases, itemId, qty } ],
+  auditTrail:   [ { id, at, by, action, detail } ],
   suppliers:    [ string ],
   categories:   [ string ],
   favorites:    { raw: [], prep: [] },
   periodStart:  number,
-  _revision:    number
+  _revision:    number,
+  _restoredBy:  string,            // chỉ có sau khi khôi phục JSON
+  _restoredAt:  string
 }
 ```
+
+`at` **không phải** tồn kho: `qty` là nguồn duy nhất; `at` do `rebuildLocationBalances()` dựng lại từ `db.ops` ở mỗi `renderAll()`. Vì vậy sửa tay `at` không có tác dụng lâu dài, và server cũng không kiểm tra trường này.
 
 Chi tiết từng trường xem `DATABASE_SCHEMA.md`.
 
@@ -92,12 +106,23 @@ thao tác người dùng
 
 Ghi tuần tự bằng `cloudSaveQueue` để hai lần lưu liên tiếp không ghi đè nhau. `lastCloudSnapshot` giữ bản cuối đã đồng bộ để gắn `createdBy` cho phiếu mới.
 
+Ba lớp chống mất dữ liệu:
+
+| Lớp | Hành vi |
+|---|---|
+| `localStorage` | `save()` bọc `try/catch`; hết dung lượng thì báo lỗi và **không** coi là đã lưu im lặng. |
+| Hàng đợi cloud | Mỗi lần lưu nối vào `cloudSaveQueue`, giữ đúng thứ tự; nút Lưu bị khoá khi đang gửi (chống double-submit). |
+| Server | `save_workspace_state` tự tính lại tồn từ chênh lệch phiếu cho **mọi vai trò** (kể cả owner) và từ chối nếu `qty` lệch khỏi `old.qty + Δ` hoặc Δ làm âm kho. |
+
+Khôi phục toàn bộ JSON đi qua RPC riêng `replace_workspace_state` (chỉ owner), ghi thêm `_restoredBy`/`_restoredAt`. Không dùng `save_workspace_state` cho việc này vì RPC đó kiểm tra tồn theo phiếu.
+
 ## 6. Phân quyền
 
-- **Giao diện:** `applyRolePermissions()` gán `body.dataset.role`, ẩn nav `[data-page]` không được phép (`roleCanOpen`), chuyển về dashboard nếu trang hiện tại bị cấm.
-- **Mở form:** `openModal()` chặn theo vai trò (ví dụ quản lý không mở được `item`, `recipe`, `audit`, `import`).
-- **Sửa phiếu:** `roleCanEditOperations()` → `employee` không được sửa/xóa phiếu.
-- **Server:** RPC `save_workspace_state` kiểm tra vai trò và chỉ cho phép nhân viên thêm phiếu, không sửa cấu hình.
+- **Giao diện:** `applyRolePermissions()` gán `body.dataset.role`, ẩn nav `[data-page]` không được phép (`roleCanOpen`), chuyển về dashboard nếu trang hiện tại bị cấm. Quản lý và nhân viên chỉ thấy `dashboard`, `inventory`, `operations`.
+- **Mở form:** `openModal()` chặn theo vai trò: `manager` không mở được `item`, `prepitem`, `recipe`, `audit`, `import`; ngoài owner không ai mở `item`, `prepitem`, `recipe`, `audit`; `employee` chỉ mở `stockin`, `stockout`, `dailyflow`, `saleissue`, `cook`, `dayclose`, `waste`, `locmove`.
+- **Sửa/vô hiệu hoá phiếu:** `roleCanEditOperations()` → `employee` không được sửa/xoá; `deleteOperation()` chuyển thành **vô hiệu hoá** (`status:'voided'`), giữ lịch sử.
+- **Kiểm kê:** phiếu nháp/chốt dùng chung màn hình của owner (`openModal('audit')`). `approveStocktake()` và `deleteStocktake()` tự chặn nếu không phải owner.
+- **Server:** RPC `save_workspace_state` kiểm tra vai trò và chỉ cho phép nhân viên **thêm** phiếu hợp lệ; với non-owner, các khóa ngoài `ops`/`items`/`audits` lấy từ bản cũ trên server, nên sửa cấu hình bằng console cũng bị ghi đè. Từ migration 20261030, `audits` của non-owner chỉ được **thêm phiếu nháp do chính mình tạo**.
 
 ## 7. Sinh mã mặt hàng tự động
 
@@ -208,7 +233,7 @@ Toàn bộ phần này nằm trong **một khối `<style>` cuối cùng** của
 4. Bảng trên mobile phải chuyển thành thẻ hoặc danh sách dòng, không cuộn ngang.
 5. Icon: `icon.svg` (nguồn), `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (180, nền đặc). Thêm file mới phải khai báo trong `SHELL` của `sw.js`.
 
-## 10. Phiếu kho: chọn mặt hàng và chốt ca
+## 10. Phiếu kho, kiểm kê và đối soát
 
 Mọi phiếu kho dùng **cùng một bộ chọn**: nút hiển thị mặt hàng đã chọn + menu tìm kiếm có nhóm, giống ô “Chọn nguyên liệu” của form BTP. Không còn `<select>` thô hay ô tìm + datalist.
 
@@ -243,6 +268,81 @@ Vì phiếu đơn vẫn giữ `<select id="f-item">` ẩn, `saveForm()` đọc `
 
 > Lỗi đã gặp: `display:flex` cho `.ingredient-picker-menu` trên mobile ghi đè `[hidden]` làm mọi menu mở sẵn. Luôn kèm `.ingredient-picker-menu[hidden]{display:none!important}` khi thêm `display` cho phần tử có `hidden`.
 
+### 10.2 Vị trí bảo quản (quầy / tủ)
+
+Hàng xuất khỏi kho được ghi nhận là đang nằm tại một **vị trí** và dùng dần, thay vì biến mất khỏi sổ.
+
+| Thành phần | Chi tiết |
+|---|---|
+| `db.locations` | Mặc định `Quầy bar`, `Tủ mát`, `Khu pha chế`; sửa ở **Cài đặt → Vị trí bảo quản**. |
+| `item.at` | Object `{ locId: số lượng }`, **dẫn xuất** từ phiếu, không phải tồn kho. |
+| Ba loại phiếu | `issue_location` (−kho, +vị trí), `return_location` (+kho, −vị trí), `use_location` (0 kho, −vị trí). |
+| `rebuildLocationBalances()` | Dựng lại toàn bộ `at` từ `db.ops` ở mỗi `renderAll()`; bỏ qua phiếu `voided`; chỉ giữ số dư > 0,00001. |
+| Giao diện | Nút **Quầy & tủ** (`openModal('locmove')`) ở Tồn kho/Dashboard, bảng **Hàng ngoài kho** và cột “Ngoài kho”. |
+
+- `use_location` không đổi `qty` nên **không** xuất hiện trong công thức chênh lệch; `issue_location`/`return_location` thì có.
+- Xoá vị trí bị chặn khi còn hàng tại vị trí đó.
+- Migration 20261029 bỏ `at` khỏi phép so sánh cấu hình mặt hàng (vì `at` đổi khi ghi phiếu vị trí) và thêm 3 loại phiếu vào whitelist của quản lý/nhân viên.
+- Server **không** kiểm tra `at`; chỉ `qty` được đối chiếu với phiếu. Vì vậy `at` luôn được dựng lại ở client và không dùng để tính tiền/tồn.
+
+### 10.3 Mẻ nấu (batch)
+
+| Hàm | Nhiệm vụ |
+|---|---|
+| `nextBatchCode(day)` | Sinh mã `ME-YYYYMMDD-NNN`, lấy max trong ngày + 1. |
+| `addBatch(opts)` | Tạo bản ghi mẻ: `actualQty`, `plannedQty`, `day`, `startedAt`, `expiresAt = startedAt + shelf giờ`, `operator = actorLabel()`, `consumption[]`, `ops[]`. |
+| `renderBatches()` | Bảng **Mẻ nấu gần đây** (20 mẻ) ở trang Công thức: mã, sản lượng, thời điểm, người làm, hạn dùng, tần suất nấu hôm nay. |
+
+- Phiếu `prep` và các `stockout` nguyên liệu phát sinh khi nấu đều được gắn `batchId`/`batchCode` để truy vết.
+- Hạn dùng tính từ **thời điểm bắt đầu nấu** (giờ máy), không theo ngày; `shelf` là số giờ của BTP.
+- `actorLabel()` trả email khi đang đăng nhập cloud, `Thiết bị này` ở chế độ local.
+
+### 10.4 Vô hiệu hoá phiếu thay vì xoá
+
+- `deleteOperation(id)` **không** xoá bản ghi: đặt `status:'voided'` + `voidedAt`, `voidedBy`, `voidReason`, tính bù tồn và chặn nếu tồn sẽ âm.
+- `opVoided(o)` được dùng ở mọi phép tính (tồn, chốt ca, chênh lệch, đối soát POS), nên phiếu đã huỷ không còn ảnh hưởng báo cáo.
+- Phiếu `adjust` (do kiểm kê) **không thể** vô hiệu — muốn sửa thì kiểm kê lại để sinh điều chỉnh mới.
+- `saveOperationEdit()` ghi `editedAt`, `editedBy` và đẩy bản `before` vào `history[]` của phiếu.
+
+### 10.5 Kiểm kê nháp → chốt phiếu
+
+| Hàm | Nhiệm vụ |
+|---|---|
+| `saveStocktake(draft)` | Đọc các ô `.audit-count`; ô trống = **chưa đếm**; cần ≥ 1 dòng. `draft=true` → chỉ ghi `audit` với `status:'draft'`, **không** đổi tồn. `draft=false` → tạo phiếu `adjust` cho từng dòng lệch, đặt `qty = counts`, cập nhật `periodStart`. |
+| `approveStocktake(id)` | Chốt phiếu nháp (owner): tính lại lệch theo tồn **hiện tại**, tạo `adjust`, đánh dấu `approved`; cảnh báo số mặt hàng đã thay đổi kể từ lúc đếm (`moved`). |
+| `deleteStocktake(id)` | Chỉ xoá được phiếu **nháp**; phiếu đã chốt phải kiểm kê lại. |
+
+- Bản ghi `audit`: `id`, `date`, `counts`, `system` (tồn lúc đếm), `counted`, `note`, `adjustments`, `operator`, `status`, `createdBy`, `approvedAt`, `approvedBy`.
+- Bảng **Phiếu kiểm kê** ở trang Đối soát (thiếu/thừa/trạng thái) + thẻ mobile; nút Chốt/Xoá chỉ hiện với phiếu nháp.
+- Migration 20261030: non-owner chỉ **thêm** được `audit` `status:'draft'` do chính mình tạo, không sửa/xoá phiếu cũ, và `audits` được giữ lại khi lưu. Giao diện hiện vẫn chỉ mở màn hình kiểm kê cho owner; phần server là để sẵn cho vai trò khác.
+
+### 10.6 Chênh lệch theo kỳ (variance)
+
+| Hàm | Nhiệm vụ |
+|---|---|
+| `theoreticalOpening(itemId, fromDay)` | Neo theo lần kiểm kê gần nhất **trước** kỳ; nếu chưa có thì lấy `qty` hiện tại trừ tổng hiệu ứng phiếu từ `fromDay`. |
+| `varianceReport(from, to)` | Trả `opening`, `purchases`, `prepIn`, `outNet`, `adjust`, `theoretical`, `actual`, `variance` cho từng mặt hàng + tổng hợp thiếu/thừa. |
+| `buildVariance()` / `setVarianceHeaders()` | Vẽ bảng `#variance-table` và dòng tổng kết `#variance-summary` theo kỳ chọn ở `#var-from`/`#var-to`. |
+| `exportVariance()` | Tải CSV cùng engine, tên `moc-chenh-lech-<from>_<to>.csv`. |
+| `renderComparison()` | Panel **So sánh xuất dùng trên app với POS**: POS kỳ vọng vs phiếu `stockout`/`sale_issue` − `sale_return`/`sale_waste`. |
+
+Công thức: `lý thuyết = đầu kỳ + nhập + nấu (+) − xuất ròng + điều chỉnh`, với `xuất ròng = stockout + sale_issue + waste + issue_location − sale_return − return_location`. `thực tế` lấy từ số đếm của lần kiểm kê cuối trong kỳ; `chênh lệch = thực tế − system` nếu phiếu kiểm kê có `system`, ngược lại `thực tế − lý thuyết`.
+
+### 10.7 POS: size, topping và đơn huỷ
+
+- `db.posModifiers` = `{ id, name, aliases[], itemId, qty }`; mỗi topping một dòng, `qty` theo đơn vị dùng của mặt hàng. Sửa ở **Cài đặt → Topping & tuỳ chọn POS** (owner).
+- `findPosModifier(name)` khớp tên **và** bí danh qua `normalizePosKey` (không dấu); `modifierConsumption(text, qty)` trả `{ cons, missing }`, phần không khớp được đếm vào `modifierMissing`.
+- File POS nhận cột Size / Topping / Trạng thái. Dòng **huỷ/hoàn** (`huỷ/hủy/cancel/refund/hoàn tiền/trả hàng/trả lại`) hoặc có số lượng ≤ 0 bị bỏ qua; “Hoàn thành” **không** bị bỏ nhầm; các dòng trùng `code|name|size|mods` trong cùng file được cộng gộp.
+- Báo cáo trùng được nhận diện bằng `hash` (`strHash`) hoặc cùng tên file + kỳ; người dùng được hỏi xác nhận rồi **thay thế** bản ghi cũ thay vì cộng dồn. Import lưu thêm `cancelled`, `modifiers`, `modifierMissing`.
+- Nhập POS vẫn **không** đổi tồn kho.
+
+### 10.8 Nhật ký thay đổi cấu hình
+
+- `db.auditTrail` = `{ id, at, by, action, detail }`; `logConfig(action, detail)` ghi lên đầu và cắt còn **300** dòng.
+- Xem ở **Cài đặt → Lịch sử thay đổi** (`openChangeLog`, hiện 100 dòng gần nhất).
+- Ghi các hành động cấu hình: thêm/sửa/xoá mặt hàng, BTP, món POS, giá đề xuất, vị trí, tuỳ chọn POS, vô hiệu hoá phiếu, chốt/xoá phiếu kiểm kê.
+- **Không** ghi từng lần đổi tồn (đã có `db.ops`); nhật ký chỉ để trả lời “ai đổi cấu hình, khi nào”.
+
 ## 11. Nhập và xuất dữ liệu (Cài đặt → Dữ liệu kho)
 
 Panel chia 4 khối `<details class="settings-group">` để không chiếm chỗ:
@@ -256,17 +356,18 @@ Panel chia 4 khối `<details class="settings-group">` để không chiếm ch�
 
 `downloadXlsxTemplate(type, mode)` dùng chung một bộ sinh OOXML (`templateSheetXml`, `zipStored`): `mode='template'` → không kèm dòng dữ liệu; `mode='export'` → kèm `templateRows(type)` và không hỏi xác nhận.
 
-Chưa có: mẫu nhập **kiểm kê (audit)**, nhật ký thay đổi cấu hình, báo cáo tồn kho theo ngày (xem `CURRENT_STATUS.md` mục 4).
+Chưa có: mẫu nhập **kiểm kê (audit)**, báo cáo tồn kho theo ngày (xem `CURRENT_STATUS.md` mục 4).
 
 ## 12. Quy ước sửa `index.html`
 
 Vì toàn bộ app nằm trong một file, mỗi lần sửa phải:
 
 1. Sao lưu: `cp index.html backups/index.html.$(date +%Y%m%d-%H%M)`.
-2. Sửa xong chạy kiểm tra cú pháp (xem `TEST_PLAN.md`, mục 2).
-3. Tăng `CACHE` trong `sw.js` để người dùng nhận bản mới.
+2. Sửa xong chạy `node tools/verify.js` (127 mục, xem `TEST_PLAN.md` mục 2).
+3. Tăng `CACHE` trong `sw.js` để người dùng nhận bản mới — **chỉ khi** sửa `index.html` hoặc tệp nằm trong `SHELL`. Sửa mỗi tài liệu thì không cần.
 4. Thêm **một dòng** vào `docs/_PENDING.md`.
 5. Commit git — **không bao giờ** để file chỉ tồn tại trên đĩa.
+6. Nếu sửa hành vi phiếu kho/kiểm kê/vị trí, kiểm tra lại `workspace_op_delta` trong migration mới nhất có xử lý loại phiếu đó chưa; thiếu là server sẽ từ chối lưu.
 
 ### 12.1 Tài liệu chỉ chốt theo lô
 

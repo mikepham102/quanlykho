@@ -5,14 +5,16 @@
 ## Vai trò
 
 - **Chủ quán:** toàn quyền cấu hình, dữ liệu, tài khoản và phân quyền.
-- **Quản lý:** xem dashboard, tồn kho và phiếu kho; tạo, sửa, xóa phiếu vận hành. Không mở cấu hình mặt hàng, danh mục, công thức hoặc tài khoản.
-- **Nhân viên:** xem dashboard, tồn kho và phiếu kho; ghi nghiệp vụ kho. Không sửa/xóa phiếu đã lưu hoặc thay đổi cấu hình.
+- **Quản lý:** xem dashboard, tồn kho và phiếu kho; tạo, sửa, vô hiệu hoá phiếu vận hành (kể cả phiếu quầy/tủ). Không mở cấu hình mặt hàng, danh mục, công thức hoặc tài khoản.
+- **Nhân viên:** xem dashboard, tồn kho và phiếu kho; ghi nghiệp vụ kho (ở quầy/tủ chỉ được ghi “dùng”). Không sửa/vô hiệu hoá phiếu đã lưu hoặc thay đổi cấu hình.
 
 Chủ quán có thể đặt tên thương hiệu, tên chi nhánh và logo tại **Cài đặt → Thương hiệu & chi nhánh**. Logo được thu nhỏ trong trình duyệt và lưu cùng workspace để các thiết bị dùng chung.
 
 Giá bán đề xuất được cấu hình tại **Cài đặt → Cấu hình giá đề xuất**: hao hụt nguyên liệu, chi phí vận hành và khấu hao mỗi tháng, số ly dự kiến, VAT, Food Cost và lợi nhuận mục tiêu, phí sàn và phí khác của app giao đồ ăn, cách làm tròn giá. Hệ thống hiển thị song song **giá tại quán** và **giá trên app**, kèm hộp mô phỏng để thấy ngay cơ cấu chi phí và lãi trước/sau thuế. Giá trị mặc định giữ nguyên cách tính cũ (giá vốn 8.855 đ → 39.000 đ tại quán, 49.000 đ trên app). Chi tiết công thức xem `docs/BUSINESS_RULES.md` mục 6.
 
 Các quyền ghi dữ liệu được kiểm tra lại bằng Supabase RPC, không chỉ ẩn nút trên giao diện. Tài khoản nhân viên được giới hạn thao tác tạo phiếu và các cập nhật tồn phải khớp với phiếu đó.
+
+Ngoài phiếu kho cơ bản, ứng dụng còn ghi được **hàng đang ở quầy/tủ** (tách khỏi tồn kho), **mã mẻ nấu kèm hạn dùng**, **kiểm kê lưu nháp rồi chốt thành phiếu điều chỉnh** (không sửa tồn tay), **báo cáo chênh lệch theo kỳ** và **nhật ký ai sửa cấu hình**. Chi tiết nghiệp vụ xem [BUSINESS_RULES.md](docs/BUSINESS_RULES.md) mục 7–11; kiến trúc xem [ARCHITECTURE.md](docs/ARCHITECTURE.md) mục 10.
 
 ## Cài như app trên điện thoại
 
@@ -28,6 +30,7 @@ Khi đã cài ra màn hình chính, ứng dụng khoá phóng to, không kéo t�
 2. Điền hai giá trị đó vào `supabase-config.js`. Đây là cấu hình công khai của trình duyệt; không đưa `service_role` key vào tệp này.
 3. Chạy `supabase/migrations/20261020_accounts_and_workspace.sql` trong SQL Editor.
 4. Nếu tài khoản đã được tạo trước khi cài migration, chạy tiếp `supabase/migrations/20261021_backfill_existing_user_profiles.sql` để tạo hồ sơ vai trò còn thiếu.
+4b. Chạy tiếp ba migration mới theo đúng thứ tự: `20261028_integrity_audit_adjust.sql`, `20261029_locations.sql`, `20261030_stocktake_drafts.sql`. Thiếu file cuối, phiếu vị trí (quầy/tủ) và phiếu kiểm kê nháp sẽ bị server từ chối dù giao diện vẫn cho bấm.
 5. Tạo tài khoản chủ quán trong **Authentication → Users** (hoặc dùng luồng đăng ký do Supabase cung cấp), rồi gán vai trò bằng câu SQL bootstrap ở cuối migration, thay `OWNER_EMAIL` bằng email chủ quán. Chạy câu này sau bước backfill để cập nhật đúng hồ sơ.
 6. Cài Supabase CLI, đăng nhập và deploy Edge Function `invite-user`. Function cần secrets do Supabase quản lý; `SUPABASE_SERVICE_ROLE_KEY` chỉ được dùng ở Edge Function, không bao giờ gửi xuống trình duyệt.
 7. Cấu hình **Authentication → URL Configuration**: đặt `https://mikepham102.github.io/quanlykho/` làm Site URL và thêm `https://mikepham102.github.io/quanlykho/**` vào Redirect URLs. Luồng quên mật khẩu trong ứng dụng chuyển hướng cố định về địa chỉ GitHub Pages này.
@@ -44,7 +47,7 @@ Workflow `.github/workflows/deploy.yml` triển khai nội dung repository khi c
 
 ## Chạy độc lập
 
-Nếu `supabase-config.js` để trống, ứng dụng tiếp tục dùng `localStorage` như trước. Chế độ này không có tài khoản hoặc phân quyền; không dùng cấu hình trống khi phát hành bản dùng chung.
+Nếu `supabase-config.js` để trống, ứng dụng dùng `localStorage` như trước — nhưng **chỉ khi mở tệp trực tiếp** (`file://`). Mở qua `http(s)://` mà chưa cấu hình Supabase sẽ hiện màn hình “Chưa cấu hình dữ liệu dùng chung” và chặn truy cập, để tránh phát hành nhầm bản không có dữ liệu chung. Chế độ này không có tài khoản hoặc phân quyền; không dùng cấu hình trống khi phát hành bản dùng chung.
 
 ## Mã hàng tự động
 
@@ -71,7 +74,7 @@ Toàn bộ ứng dụng nằm trong `index.html`, nên sau mỗi lần sửa hã
 node tools/verify.js
 ```
 
-Script kiểm tra cú pháp, cấu trúc tệp, hàm trùng, logic sinh mã, ô tìm kiếm nguyên liệu, công thức giá đề xuất, giao diện native, bộ chọn mặt hàng trong phiếu kho và nhóm dữ liệu (97 mục). Sau đó tăng `CACHE` trong `sw.js` để trình duyệt nhận bản mới.
+Script kiểm tra cú pháp, cấu trúc tệp, hàm trùng, logic sinh mã, ô tìm kiếm nguyên liệu, công thức giá đề xuất, giao diện native, bộ chọn mặt hàng trong phiếu kho, toàn vẹn dữ liệu (adjust/void), chênh lệch theo kỳ, POS nâng cao, mẻ nấu, vị trí bảo quản và kiểm kê nháp (**127 mục**). Sau đó tăng `CACHE` trong `sw.js` để trình duyệt nhận bản mới.
 
 Tài liệu **không** cần sửa sau mỗi thay đổi: chỉ thêm một dòng vào `docs/_PENDING.md`, và cập nhật các file trong `docs/` khi có yêu cầu “chốt docs” (xem `docs/ARCHITECTURE.md` mục 12.1).
 

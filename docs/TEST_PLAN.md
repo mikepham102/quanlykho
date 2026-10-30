@@ -1,6 +1,6 @@
 # TEST PLAN — Kế hoạch kiểm thử
 
-> Cập nhật: 28/10/2026. Áp dụng cho app một tệp `index.html` + Supabase.
+> Cập nhật: 30/10/2026. Áp dụng cho app một tệp `index.html` + Supabase.
 
 ## 1. Phạm vi
 
@@ -22,24 +22,26 @@ cd /Users/mikepham/Documents/Inventory_milktea
 node tools/verify.js
 ```
 
-Script kiểm tra 97 mục:
+Script kiểm tra **127 mục**, chia theo nhóm:
 
-1. Kích thước tệp hợp lý, **đúng một** `</script></body></html>`, tệp kết thúc bằng `</html>`.
-2. Cú pháp từng khối `<script>` nội tuyến bằng `vm.Script`.
-3. Không có hàm khai báo trùng (dấu hiệu tệp bị ghép lỗi).
-4. Tồn tại đủ `normalizePosKey`, `rawCodePrefix`, `nextItemCode`, `syncItemCode`.
-5. 13 trường hợp map danh mục → prefix.
-6. 4 trường hợp sinh mã kế tiếp (kể cả bỏ qua mã khác prefix).
-7. `syncItemCode` không ném lỗi khi form chưa tồn tại.
-8. Ô tìm kiếm nguyên liệu: có luật `[hidden] { display:none !important }`, hàm lọc dùng `normalizePosKey`, ẩn tiêu đề nhóm rỗng, có thông báo “không tìm thấy”.
-9. `sw.js` có khai báo `CACHE`.
-10. Cấu hình giá: Cài đặt có mục “Cấu hình giá đề xuất”, không còn hằng số `PRICING_POLICY`/caption cũ, `db.pricing` được chuẩn hóa ngay khi nạp, đủ 8 hàm tính giá.
-11. Số học giá đề xuất (chạy hàm thật tách từ `index.html`): mặc định 39.000/49.000, VAT không làm đổi giá, hao hụt và vận hành làm tăng giá, chế độ “bằng giá quán”, phí app ≥ 90 %, làm tròn, `sanitizePricing` với dữ liệu rác, giá vốn 0 không sinh `NaN`, `defaultPricing` trả bản sao.
-12. Giao diện native: viewport khoá zoom + `viewport-fit=cover` (đúng **một** thẻ), meta iOS chạy toàn màn hình, `apple-touch-icon` 180px tồn tại, `overscroll-behavior:none`, `user-select:none`, `--tap:44px`, input 16px, 3 mức `data-fs`, mobile cuộn trong `.main`, overlay xoay dọc, icon PNG có trong `SHELL`, manifest `orientation/display/icons/id`.
-13. Đồng đều hiển thị: dashboard dùng `.metric-line` và ẩn chú thích trên mobile, bộ lọc Tồn kho xếp dọc 46px chữ 16px, nút nghiệp vụ Tồn kho 48px, chữ dữ liệu dùng `calc(var(--fs-body) …)`.
-14. Công thức & món: nút “＋ Thêm món” nằm cạnh ô tìm trong `.panel-head-tools`, không còn ở `page-head`, hai panel dùng chung một kiểu, không còn dòng hướng dẫn dài.
-15. Phiếu kho & chốt ca: đủ 4 phiếu một mặt hàng dùng `itemPickerHtml` (không còn `<select id="f-item">` thô), 4 chỗ dùng bộ chọn `mode:'flow-*'`, không còn `addFlowLine`/`flow-*-search`; chốt ca lọc theo `sale_issue` và có `#dayclose-list`.
-16. Cài đặt & dữ liệu: không còn 2 mục trùng (Định lượng & quy đổi POS, dải “Đang áp dụng”), đúng 3 khối `<details>` + vùng nguy hiểm, có `exportXlsx`, mẫu Excel là mẫu trống (`mode='template'`).
+| Nhóm | Số mục | Nội dung |
+|---|---|---|
+| Cấu trúc tệp | 9 | Kích thước hợp lý, **đúng một** `</script></body></html>`, tệp kết thúc bằng `</html>`, cú pháp từng khối `<script>` bằng `vm.Script`, không có hàm khai báo trùng. |
+| Sinh mã mặt hàng | 19 | Đủ 4 hàm, 13 trường hợp map danh mục → prefix, 4 trường hợp sinh mã kế tiếp, `syncItemCode` an toàn khi chưa có form. |
+| Ô tìm nguyên liệu | 4 | Luật `[hidden] { display:none !important }`, lọc bằng `normalizePosKey`, ẩn nhóm rỗng, có thông báo “không tìm thấy”. |
+| Cài đặt giá (hiện diện) | 8 | Có mục “Cấu hình giá đề xuất”, không còn `PRICING_POLICY`/caption cũ, `db.pricing` chuẩn hoá ngay khi nạp, đủ 8 hàm tính giá. |
+| Số học giá đề xuất | 29 | Chạy hàm thật: mặc định 39.000/49.000, VAT không đổi giá, hao hụt/vận hành làm tăng giá, `same`, phí app ≥ 90 %, làm tròn, `sanitizePricing` với dữ liệu rác, giá vốn 0 không `NaN`, `defaultPricing` trả bản sao. |
+| Service worker | 1 | `sw.js` có `CACHE`. |
+| Giao diện native | 16 | Viewport khoá zoom + `viewport-fit=cover` (đúng một thẻ), meta iOS, `apple-touch-icon` 180px, `overscroll-behavior:none`, `user-select:none`, `--tap:44px`, input 16px, 3 mức `data-fs`, cuộn trong `.main`, overlay xoay dọc. |
+| Bố cục trang | 2 | “＋ Thêm món” nằm cạnh ô tìm trong `.panel-head-tools`, không còn dòng hướng dẫn dài. |
+| Phiếu kho & chốt ca | 4 | 4 phiếu một mặt hàng dùng `itemPickerHtml`, 4 chỗ dùng `mode:'flow-*'`, chốt ca lọc theo `sale_issue`, hai panel Công thức dùng chung kiểu. |
+| Manifest / icon | 5 | `orientation: portrait`, `display: standalone`, icon 192/512, `id` ổn định, icon PNG có trong `SHELL`. |
+| Toàn vẹn dữ liệu (P0) | 9 | `adjust` thay cho ghi đè tồn, phiếu `voided` vẫn giữ lịch sử, không xoá dữ liệu kiểm kê, bắt lỗi hết dung lượng, chống nhập trùng POS, chặn bấm lưu hai lần, bỏ phiếu huỷ khỏi đối soát, migration P0. |
+| Chênh lệch theo kỳ | 4 | `varianceReport` thay `db.audits.at(-1)`, chọn kỳ + dòng tổng kết, xuất Excel dùng cùng engine, tính tồn đầu kỳ từ mốc kiểm kê. |
+| POS nâng cao | 4 | Map size + topping, bỏ đơn huỷ mà không bỏ nhầm “Hoàn thành”, lưu lượt topping, có mục Cài đặt. |
+| Mẻ nấu | 3 | Mã/sản lượng/người làm/hạn dùng, phiếu nấu gắn `batchId`, bảng mẻ nấu gần đây. |
+| Vị trí bảo quản | 5 | Xuất kho trừ tồn + ghi nhận tại vị trí, dùng tại chỗ không đổi tồn, `at` dựng lại từ phiếu, có bảng Hàng ngoài kho, phiếu vị trí vào chênh lệch. |
+| Kiểm kê nháp & nhật ký | 5 | Lưu nháp không đổi tồn, chốt tạo `adjust` + `approved`, bảng Phiếu kiểm kê có Chốt/Xoá, nhật ký có ghi và xem lại, dashboard có thẻ đối soát. |
 
 **Điều kiện đạt:** in `TẤT CẢ PASS` và exit code `0`.
 
@@ -63,7 +65,22 @@ Kiểm tra trong `/tmp/dom.html`:
 - Có form đăng nhập (`login-email`) khi đã cấu hình Supabase.
 - Không có `Uncaught`, `SyntaxError`, `TypeError` trong log Chrome.
 
-Với chế độ local (bỏ trống `supabase-config.js`), có thể tiêm script tạm vào **bản sao** trong `/tmp` để mô phỏng thao tác (mở form, đổi danh mục, lưu) và đọc kết quả qua `data-test` trên `<body>`. Không sửa trực tiếp tệp thật để test.
+Muốn kiểm tra **chế độ local** (không đăng nhập), làm trên **bản sao** trong `/tmp` với `supabase-config.js` rỗng rồi mở bằng `file://`:
+
+```bash
+d=/tmp/moc-headless; rm -rf "$d"; mkdir -p "$d"
+cp index.html sw.js manifest.webmanifest icon*.png apple-touch-icon.png "$d"/
+printf 'window.MOC_SUPABASE_CONFIG={url:"",anonKey:""};' > "$d/supabase-config.js"
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless=new --no-sandbox --disable-gpu --user-data-dir=/tmp/chrome-moc2 \
+  --virtual-time-budget=9000 --enable-logging=stderr \
+  --dump-dom "file://$d/index.html" > /tmp/dom-local.html 2>/tmp/chrome-local.log
+```
+
+- **Không** dùng `http://` cho bản sao này: app cố ý chặn bằng màn hình “Chưa cấu hình dữ liệu dùng chung” (xem `ARCHITECTURE.md` mục 5).
+- Trong `file://`, lỗi CORS của `manifest.webmanifest` là bình thường, không tính là lỗi app.
+- Trong môi trường sandbox/CI, thêm `--no-sandbox`; thiếu cờ này Chrome có thể crash `Trace/BPT trap: 5` trước khi render.
+- Có thể tiêm script tạm vào bản sao để mô phỏng thao tác (mở form, đổi danh mục, lưu) và đọc kết quả qua `data-test` trên `<body>`. Không sửa trực tiếp tệp thật để test.
 
 Để đo đúng kích thước thiết bị (ví dụ 390×844 và 844×390), dùng một trang bao chứa `<iframe>` có kích thước cố định rồi copy `data-test` từ iframe ra trang cha: `--window-size` của Chrome headless không đảm bảo đúng viewport, còn media query thì luôn tính theo iframe. Harness hiện đo: cỡ chữ, chiều cao vùng chạm, tràn ngang, vị trí sticky/fixed, modal và menu chọn nguyên liệu.
 
@@ -190,16 +207,80 @@ Chuẩn bị: mở bản GitHub Pages trên điện thoại, **xoá icon cũ** r
 | D4 | Phiếu kho / Công thức & món | Chữ tên 14–15px, dòng phụ 12px; không còn chỗ nào 9–10px ở nội dung dữ liệu |
 | D5 | Bảng desktop (≥641px) | Giữ mật độ gọn: ô 15px, nút 44px, modal 600px |
 
+### 4.8 Vị trí bảo quản (quầy / tủ)
+
+| # | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| L1 | Tồn kho → **Quầy & tủ** → chọn *Xuất ra quầy*, 1 chai sữa, vị trí Quầy bar | Tồn kho giảm đúng số, bảng **Hàng ngoài kho** hiện dòng ở Quầy bar |
+| L2 | Mở lại, chọn *Dùng tại chỗ* nhiều hơn số đang ở quầy | Chặn: “Số lượng vượt tồn đang ở …” |
+| L3 | *Trả về kho* một phần | Tồn kho tăng lại, số ở quầy giảm tương ứng |
+| L4 | Đăng nhập nhân viên, mở **Quầy & tủ** | Chỉ chọn được *Dùng tại chỗ*, không xuất/trả |
+| L5 | Cài đặt → Vị trí bảo quản → xoá vị trí còn hàng | Bị chặn; xoá vị trí rỗng thì được và có ghi nhật ký |
+| L6 | Sửa/vô hiệu hoá phiếu vị trí | Số “Ngoài kho” được tính lại ngay, không âm |
+
+### 4.9 Mẻ nấu
+
+| # | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| B1 | Nấu BTP với sản lượng thực tế khác kế hoạch | Tồn BTP tăng theo **thực tế**; bảng Mẻ nấu gần đây có mã `ME-YYYYMMDD-001`, đúng người làm |
+| B2 | Xem cột hạn dùng | Đúng bằng giờ nấu + số giờ bảo quản; quá hạn hiện pill đỏ |
+| B3 | Nấu lần 2 trong cùng ngày | Mã tăng `…-002`; cột tần suất hôm nay của BTP đó = 2 |
+| B4 | Mở phiếu xuất nguyên liệu của mẻ | Phiếu nấu và các phiếu xuất thô đều gắn cùng `batchId` |
+
+### 4.10 Kiểm kê nháp → chốt
+
+| # | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| K1 | Kiểm kê, nhập vài số, bấm **Lưu nháp** | Không đổi tồn, không sinh phiếu; bảng Phiếu kiểm kê hiện trạng thái Nháp |
+| K2 | Chốt phiếu nháp | Mỗi dòng lệch sinh một phiếu **Điều chỉnh kiểm kê**; tồn = số đếm; phiếu chuyển Đã chốt |
+| K3 | Bán/xuất hàng sau khi đếm nhưng trước khi chốt | Khi chốt có cảnh báo N mặt hàng đã thay đổi từ lúc đếm |
+| K4 | Thử xoá phiếu đã chốt | Bị chặn, hướng dẫn kiểm kê lại |
+| K5 | Thử vô hiệu hoá phiếu điều chỉnh | Bị chặn |
+| K6 | Nhập số đếm nhưng để trống hết | Báo “Chưa đếm mặt hàng nào…” và không lưu |
+
+### 4.11 Chênh lệch theo kỳ
+
+| # | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| V1 | Chọn kỳ rồi bấm **Tính lại** | Bảng hiện đầu kỳ, nhập, nấu, xuất ròng, điều chỉnh, lý thuyết, thực tế, chênh lệch |
+| V2 | Kỳ có 1 lần kiểm kê | Dòng “Thực tế” lấy đúng số đếm; tổng kết có thiếu/thừa |
+| V3 | Kỳ chưa có kiểm kê | Cột thực tế trống, không lỗi |
+| V4 | Bấm **Tải báo cáo** | Tải CSV `moc-chenh-lech-<from>_<to>.csv` đúng số trên bảng |
+| V5 | Vô hiệu hoá một phiếu xuất trong kỳ | Chênh lệch tự tính lại, phiếu huỷ không còn ảnh hưởng |
+| V6 | Panel “So sánh xuất dùng trên app với POS” | Hiện chênh lệch app − POS theo mặt hàng, không đổi tồn |
+
+### 4.12 POS nâng cao
+
+| # | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| R1 | Cài đặt → Topping & tuỳ chọn POS → thêm “Trân châu”, định lượng 30 g | Lưu được; sửa/xoá có ghi nhật ký |
+| R2 | Nhập file POS có cột Topping | Số topping khớp được cộng vào tiêu thụ lý thuyết; topping lạ vào `modifierMissing` |
+| R3 | File có cột Trạng thái: “Hoàn thành” và “Đã huỷ” | Chỉ bỏ dòng huỷ; dòng “Hoàn thành” vẫn tính |
+| R4 | Nhập lại đúng file đó | Bản ghi cũ được **thay thế**, không cộng dồn |
+| R5 | Nhập file có dòng số lượng âm | Dòng đó bị bỏ, có đếm vào số đơn huỷ |
+
+### 4.13 Vô hiệu hoá phiếu và nhật ký
+
+| # | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| Q1 | Quản lý vô hiệu hoá một phiếu xuất | Phiếu còn trong lịch sử, có nhãn “Đã huỷ”, tồn được tính bù |
+| Q2 | Vô hiệu hoá phiếu làm tồn âm | Bị chặn |
+| Q3 | Sửa phiếu kho | Lưu `editedAt`/`editedBy`; đổi ngày/số lượng làm chốt ca tính lại |
+| Q4 | Cài đặt → Lịch sử thay đổi | Thấy dòng vừa phát sinh (ai, việc gì, chi tiết), mới nhất ở đầu |
+| Q5 | Đổi giá/BOM rồi xem lại nhật ký | Có dòng tương ứng; không có dòng cho từng lần đổi tồn |
+
 ## 5. Tiêu chí nghiệm thu
 
-- `node tools/verify.js` → `TẤT CẢ PASS`.
-- 100% mục 4.1, 4.2, 4.2c, 4.6 và 4.7 PASS.
-- Không có lỗi nghiêm trọng (âm kho, mất dữ liệu, không đăng nhập được) ở mục 4.3–4.5.
+- `node tools/verify.js` → `TẤT CẢ PASS (127 mục)`.
+- 100% mục 4.1, 4.2, 4.2c, 4.6, 4.7, 4.8, 4.9, 4.10, 4.11, 4.13 PASS.
+- Không có lỗi nghiêm trọng (âm kho, mất dữ liệu, không đăng nhập được) ở mục 4.3–4.5, 4.12.
 - Không có lỗi console khi thao tác bình thường.
 - Trên điện thoại đã cài PWA: không zoom, không kéo tải lại, chữ dữ liệu ≥ 11px và nút bấm ≥ 44px.
+- Sau khi áp migration mới: đăng nhập **cả ba vai trò** và lưu một phiếu mỗi loại — đây là bước bắt buộc vì mới chỉ kiểm chứng bằng đọc SQL, chưa chạy trên project thật.
 
 ## 6. Ghi nhận kết quả
 
 | Ngày | Người test | `verify.js` | Thủ công | Ghi chú |
 |---|---|---|---|---|
 | 28/10/2026 | Tự động + headless | 97/97 PASS | Mục 4.2, 4.2b, 4.2c, 4.3 (24a–24f), 4.4 (27a–27f), 4.6, 4.7 PASS | Chưa test đăng nhập thật trên cloud và chưa thử trên máy thật |
+| 30/10/2026 | Tự động + headless | **127/127 PASS** | Headless `file://` chế độ local: 6 trang, 1 trang active, không lỗi console (chỉ CORS manifest). Chưa chạy lại 4.1–4.13 trên cloud | Phát hiện rủi ro XSS lưu trữ, nháp kiểm kê làm mốc tính tồn, poll ghi đè khi lưu lỗi — xem `CURRENT_STATUS.md` mục 4 |
