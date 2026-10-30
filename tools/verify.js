@@ -146,7 +146,7 @@ if (pricingConst && pricingFns.every(Boolean)) {
   const d = price.defaultPricing();
   const m = price.priceModel(8855, d);
   assertEq('giá đề xuất tại quán (mặc định)', m.store, 30402);
-  assertEq('giá đề xuất trên app (mặc định)', m.app, 50252);
+  assertEq('giá đề xuất trên app (mặc định)', m.app, 34418);
   assertEq('chi phí/ly sau hao hụt 3%', Math.round(m.totalCost), 9121);
   assertEq('VAT 8% bóc tách từ giá quán', Math.round(m.storeVat), 2252);
   assertEq('lãi sau thuế tại quán', Math.round(m.storeProfitAfterTax), 19029);
@@ -156,12 +156,12 @@ if (pricingConst && pricingFns.every(Boolean)) {
 
   const ex = price.priceModel(5000, d);
   assertEq('ví dụ 5.000 đ (hao hụt 3%): giá quán', ex.store, 17167);
-  assertEq('ví dụ 5.000 đ (hao hụt 3%): giá app', ex.app, 28375);
+  assertEq('ví dụ 5.000 đ (hao hụt 3%): giá app', ex.app, 19434);
 
   const lowApp = price.priceModel(5000, price.sanitizePricing({ ...d, appProfit: 0 }));
-  assertEq('giá app = giá quán ÷ (1 - phí) khi LN app thấp', lowApp.app, 28375);
-  check('giá app luôn cao hơn giá quán khi có phí', lowApp.app > lowApp.store);
-  assertEq('giá app không đổi khi hạ LN app', lowApp.app, ex.app);
+  assertEq('LN app thấp -> giá app bằng giá quán', lowApp.app, lowApp.store);
+  check('đủ LN app thì giá app cao hơn giá quán', ex.app > ex.store);
+  assertEq('ví dụ 19.000: lợi nhuận thực trên giá bán', Math.round((1 - 0.395 - 5000 / 19000) * 1000) / 10, 34.2);
 
   const vat18 = price.priceModel(8855, price.sanitizePricing({ ...d, vatPct: 18 }));
   assertEq('VAT không làm đổi giá quán', vat18.store, m.store);

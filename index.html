@@ -601,13 +601,13 @@ function priceModel(cost,policy){
   m.storeMarginRaw=marginStore<.95?totalCost/(1-marginStore):0;
   m.storeRaw=Math.max(m.storeFcRaw,m.storeMarginRaw);
   m.store=Math.round(m.storeRaw);
-  // Giá app: cộng đủ phí sàn + thuế + quảng cáo (tính trên giá bán) lên trên giá quán,
-  // đồng thời không thấp hơn mức cần để đạt lợi nhuận app tối thiểu.
+  // Giá app: đủ để trả phí sàn + thuế + quảng cáo VÀ đạt lợi nhuận app mong muốn
+  // (cả hai tính trên giá bán app), không thấp hơn giá quán.
   let feeRate=Math.min(.95,Math.max(0,(p.appCommission+p.appOtherFee+p.appPromoDiscount)/100)),marginApp=Math.min(.95,Math.max(0,p.appProfit/100)),denom=1-feeRate-marginApp;
   m.appFeeRate=feeRate;
-  m.appValid=feeRate<.7;
+  m.appValid=feeRate<.7&&denom>.02;
   if(p.appMode==='same')m.appRaw=m.storeRaw;
-  else if(m.appValid){m.appFeeAddRaw=m.storeRaw/(1-feeRate);m.appProfitRaw=denom>.02?totalCost/denom:0;m.appRaw=Math.max(m.appFeeAddRaw,m.appProfitRaw||0)}
+  else if(m.appValid){m.appProfitRaw=totalCost/denom;m.appRaw=Math.max(m.storeRaw,m.appProfitRaw)}
   m.app=m.appRaw>0?Math.round(m.appRaw):0;
   if(p.appMode==='same')m.app=m.store;
   let vat=p.vatPct/100;
@@ -1294,7 +1294,7 @@ function pricingHelpHtml(policy){
   let fee=s.appCommission+s.appOtherFee+s.appPromoDiscount;
   return '<p><b>Bước 1 — Giá vốn thật của 1 ly (K):</b> giá vốn × (1 + hao hụt) + vận hành/ly + khấu hao/ly.<br>Ví dụ vốn '+money(k)+' → K = <b>'+money(m.totalCost)+'</b>.</p>'+
     '<p><b>Bước 2 — Giá tại quán:</b> lấy mức cao hơn giữa hai điều kiện:<br>• đủ Food Cost: K ÷ '+pct(s.foodCostStore)+' = '+money(m.storeFcRaw)+'<br>• đủ lợi nhuận: K ÷ (1 − '+pct(s.profitStore)+') = '+money(m.storeMarginRaw)+'<br>→ <b>'+money(m.store)+'</b> (giá vốn thực '+pct(m.storeFoodCostPct)+', lợi nhuận thực '+pct(m.storeMarginPct)+').</p>'+
-    '<p><b>Bước 3 — Giá trên app:</b> phí sàn '+pct(s.appCommission)+' + phí khác '+pct(s.appOtherFee)+' + quảng cáo '+pct(s.appPromoDiscount)+' = <b>'+pct(fee)+'</b>.<br>Giá quán ÷ (1 − '+pct(fee)+') = '+money(m.appFeeAddRaw)+' (cộng đủ phí).<br>Mức đủ lợi nhuận '+pct(s.appProfit)+': K ÷ (1 − '+pct(fee)+' − '+pct(s.appProfit)+') = '+money(m.appProfitRaw)+'.<br>Lấy mức cao hơn → <b>'+money(m.app)+'</b> (lợi nhuận thực '+pct(m.appMarginPct)+').</p>'+
+    '<p><b>Bước 3 — Giá trên app:</b> phí sàn '+pct(s.appCommission)+' + phí khác '+pct(s.appOtherFee)+' + quảng cáo '+pct(s.appPromoDiscount)+' = <b>'+pct(fee)+'</b>; cần đủ lợi nhuận '+pct(s.appProfit)+'.<br>K ÷ (1 − '+pct(fee)+' − '+pct(s.appProfit)+') = '+money(m.appProfitRaw)+', không thấp hơn giá quán → <b>'+money(m.app)+'</b> (lợi nhuận thực '+pct(m.appMarginPct)+').</p>'+
     '<p><b>Bước 4 — VAT:</b> chỉ bóc tách để xem lãi sau thuế, không cộng vào giá. Giá giữ nguyên đến từng đồng, không làm tròn.</p>'+
     '<p class="muted">“Lợi nhuận” luôn tính trên giá bán: (giá − giá vốn − phí) ÷ giá.</p>'
 }
@@ -1310,12 +1310,13 @@ function renderPricingSim(){
   let pct=v=>priceNum(Math.round((Number(v)||0)*10)/10)+'%';
   let line=(label,value,cls)=>'<div class="price-sim-line'+(cls?' '+cls:'')+'"><span>'+label+'</span><span>'+value+'</span></div>';
   let feeSum=p.appCommission+p.appOtherFee+p.appPromoDiscount;
+  let pFc=Math.min(.95,Math.max(.05,p.foodCostStore/100)),minAppMargin=Math.max(0,1-Math.min(.7,feeSum/100)-pFc),appFloored=Boolean(m.app&&m.app<=m.store&&p.appMode!=='same');
   let warn=[];
-  if(!m.appValid)warn.push('Tổng phí app đang từ 70% trở lên nên giá app bị đẩy quá cao — không tính được giá app.');
+  if(!m.appValid)warn.push('Tổng phí app + lợi nhuận app quá cao (hoặc tổng phí ≥ 70%) nên không còn chỗ cho giá vốn — không tính được giá app.');
   if(!(p.cupsMonthly>0)&&(p.opexMonthly>0||p.depreciationMonthly>0))warn.push('Chưa nhập số ly dự kiến/tháng nên chi phí vận hành và khấu hao chưa được chia vào giá.');
   if(!(sample>0))warn.push('Nhập giá vốn 1 ly để xem mô phỏng.');
   if(m.store&&m.storeFoodCostPct>p.foodCostStore+0.05)warn.push('Giá quán đang có giá vốn '+pct(m.storeFoodCostPct)+', vượt mục tiêu '+pct(p.foodCostStore)+' — nên tăng lợi nhuận mong muốn.');
-  if(p.appMode==='separate'&&m.app&&m.app<=m.store)warn.push('Chưa có phí app nên giá app đang bằng giá quán — nhập phí sàn/thuế/quảng cáo để giá app cao hơn.');
+  if(appFloored)warn.push('Giá app đang bằng giá quán. Cần lợi nhuận app trên '+pct(minAppMargin*100)+' (hoặc nhập đủ phí sàn + quảng cáo) thì giá app mới cao hơn.');
   box.innerHTML='<div class="price-sim-row">'+
     '<div class="price-sim-card"><h4>Cơ cấu chi phí 1 ly</h4>'+
       line('Giá vốn nguyên liệu',money(m.cost))+
@@ -1333,7 +1334,8 @@ function renderPricingSim(){
       line('Lãi sau thuế (trừ VAT)',money(m.storeProfitAfterTax))+
     '</div>'+
     '<div class="price-sim-card"><h4>Trên app giao hàng</h4><div class="big">'+(m.app?money(m.app):'—')+'</div>'+
-      (p.appMode==='same'?line('Bằng giá tại quán','✓'):line('Giá quán + đủ phí',money(m.appFeeAddRaw)+(m.appRaw<=m.appFeeAddRaw+1e-6?' ✓':''))+(m.appProfitRaw>0?line('Mức đủ LN app tối thiểu',money(m.appProfitRaw)+(m.appProfitRaw>m.appFeeAddRaw?' ✓':'')):''))+
+      (p.appMode==='same'?line('Bằng giá tại quán','✓'):(m.app<=m.store?line('Giữ sàn giá quán','✓'):line('Theo lợi nhuận app',money(m.appProfitRaw)+' ✓')))+
+      (appFloored?line('LN app tối thiểu để app &gt; quán',pct(minAppMargin*100)):'')+
       line('Phí sàn + thuế + quảng cáo',pct(feeSum))+
       line('Tiền phí phải trả',money(m.appFees))+
       line('Lợi nhuận thực',pct(m.appMarginPct))+
@@ -1343,7 +1345,7 @@ function renderPricingSim(){
     '</div>'+
   '</div>'+
   (warn.length?'<div class="notice" style="margin:0">'+warn.join('<br>')+'</div>':'')+
-  '<small class="muted">Giá quán = mức cao hơn giữa “đủ Food Cost mục tiêu” và “đủ lợi nhuận mong muốn”. Giá app = giá quán ÷ (1 − tổng phí), và không thấp hơn mức đủ lợi nhuận app tối thiểu. Không làm tròn: giá giữ đến từng đồng.</small>';
+  '<small class="muted">Giá quán = mức cao hơn giữa “đủ Food Cost mục tiêu” và “đủ lợi nhuận mong muốn”. Giá app = K ÷ (1 − tổng phí − lợi nhuận app), không thấp hơn giá quán. Không làm tròn: giá giữ đến từng đồng.</small>';
 }
 async function savePricingSettings(){
   if(cloudMode&&cloudRole!=='owner')return toast('Chỉ chủ quán được thay đổi cấu hình giá đề xuất.');
