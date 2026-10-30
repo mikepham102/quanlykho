@@ -283,7 +283,7 @@ check('manifest có id ổn định', typeof manifest.id === 'string' && manifes
 check('loại phiếu điều chỉnh kiểm kê (adjust)', /kind:'adjust'/.test(src) && /adjust\[o\.itemId\]/.test(src));
 check(
   'kiểm kê tạo phiếu điều chỉnh thay vì ghi đè tồn',
-  /stocktakeId/.test(src) && /if\(!Object\.keys\(counts\)\.length\)/.test(src) && /Ô để trống = <b>chưa đếm<\/b>/.test(src)
+  /stocktakeId/.test(src) && /if\(!ids\.length\)/.test(src) && /kind:'adjust'/.test(src) && /Ô để trống = <b>chưa đếm<\/b>/.test(src)
 );
 check(
   'phiếu bị vô hiệu hoá vẫn nằm trong lịch sử',
@@ -356,6 +356,28 @@ check(
   /id="loc-table"/.test(src) && /openLocations\(\)/.test(src) && /Vị trí bảo quản/.test(src)
 );
 check('phiếu vị trí được tính vào chênh lệch theo kỳ', /o\.kind==='issue_location'\)outNet\+=q/.test(src) && /o\.kind==='return_location'\)outNet-=q/.test(src));
+
+// 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
+check(
+  'kiểm kê có chế độ lưu nháp (không đổi tồn)',
+  /function saveStocktake\(draft\)/.test(src) && /status:draft\?'draft':'approved'/.test(src) && /auditdraft/.test(src) && /Lưu nháp/.test(src)
+);
+check(
+  'chốt phiếu nháp tạo phiếu điều chỉnh và đánh dấu approved',
+  /function approveStocktake\(/.test(src) && /a\.status='approved'/.test(src) && /if\(\(a\.status\|\|'approved'\)!=='draft'\)/.test(src)
+);
+check(
+  'có bảng Phiếu kiểm kê và nút Chốt/Xoá cho phiếu nháp',
+  /id="stocktakes-table"/.test(src) && /function renderStocktakes\(/.test(src) && /function deleteStocktake\(/.test(src)
+);
+check(
+  'nhật ký thay đổi cấu hình có ghi và xem lại',
+  /function logConfig\(/.test(src) && /function openChangeLog\(/.test(src) && /Lịch sử thay đổi/.test(src) && /logConfig\('Vô hiệu hoá phiếu'/.test(src)
+);
+check(
+  'dashboard có thẻ đối soát kiểm kê',
+  /id="recon-body"/.test(src) && /function renderReconCard\(/.test(src) && /renderReconCard\(\);renderOps\(\)/.test(src)
+);
 
 // In kết quả ---------------------------------------------------------------
 for (const r of results) {
