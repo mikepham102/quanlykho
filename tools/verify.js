@@ -307,6 +307,26 @@ check(
   })()
 );
 
+// 8. Chênh lệch theo kỳ & POS nâng cao ---------------------------------------
+check(
+  'variance engine tính tồn đầu kỳ từ mốc kiểm kê',
+  /function theoreticalOpening\(/.test(src) && /function varianceReport\(/.test(src) && /function opDayOf\(/.test(src)
+);
+check(
+  'báo cáo chênh lệch dùng varianceReport (không còn db.audits.at(-1))',
+  /function buildVariance\(\)\{[\s\S]{0,1200}varianceReport\(/.test(src) && !/function buildVariance[\s\S]{0,1200}db\.audits\.at\(-1\)/.test(src)
+);
+check('báo cáo chênh lệch có chọn kỳ và dòng tổng kết', /id="var-from"/.test(src) && /id="var-to"/.test(src) && /id="variance-summary"/.test(src));
+check('xuất Excel chênh lệch dùng cùng engine', /function exportVariance\(\)\{[^}]*varianceReport\(from,to\)/.test(src));
+check(
+  'POS map được size + topping/tuỳ chọn',
+  /function posModifierList\(/.test(src) && /function modifierConsumption\(/.test(src) && /function findPosModifier\(/.test(src) &&
+    /size:si/.test(src) && /mods=mi>=0/.test(src)
+);
+check('POS bỏ qua đơn huỷ/hoàn, không bỏ nhầm “Hoàn thành”', /hoàn\\s\*tiền/.test(src) && /cancelled\+\+/.test(src));
+check('lưu lượt topping vào bản ghi nhập POS', /modifiers:modifierTotals/.test(src) && /cancelled:rows\.cancelled/.test(src));
+check('Cài đặt có mục Topping & tuỳ chọn POS', /openPosModifiers\(\)/.test(src) && /Topping &amp; tuỳ chọn POS/.test(src));
+
 // In kết quả ---------------------------------------------------------------
 for (const r of results) {
   console.log(`${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.detail ? '  → ' + r.detail : ''}`);
