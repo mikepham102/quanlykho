@@ -1309,12 +1309,13 @@ function renderPricingSim(){
   let pct=v=>priceNum(Math.round((Number(v)||0)*10)/10)+'%';
   let line=(label,value,cls)=>'<div class="price-sim-line'+(cls?' '+cls:'')+'"><span>'+label+'</span><span>'+value+'</span></div>';
   let feeSum=p.appCommission+p.appOtherFee+p.appPromoDiscount;
+  let pFc=Math.min(.95,Math.max(.05,p.foodCostStore/100)),minAppMargin=Math.max(0,1-Math.min(.95,feeSum/100)-pFc),appFloored=Boolean(m.app&&m.app<=m.store&&p.appMode!=='same');
   let warn=[];
   if(!m.appValid)warn.push('Tổng phí app + lợi nhuận app đang từ 98% trở lên nên không còn chỗ cho giá vốn — không tính được giá app.');
   if(!(p.cupsMonthly>0)&&(p.opexMonthly>0||p.depreciationMonthly>0))warn.push('Chưa nhập số ly dự kiến/tháng nên chi phí vận hành và khấu hao chưa được chia vào giá.');
   if(!(sample>0))warn.push('Nhập giá vốn 1 ly để xem mô phỏng.');
   if(m.store&&m.storeFoodCostPct>p.foodCostStore+0.05)warn.push('Giá quán đang có giá vốn '+pct(m.storeFoodCostPct)+', vượt mục tiêu '+pct(p.foodCostStore)+' — nên tăng lợi nhuận mong muốn.');
-  if(p.appMode==='separate'&&m.app&&m.app<=m.store)warn.push('Giá app bằng giá quán vì giá quán đã đủ bù phí và lợi nhuận app.');
+  if(appFloored)warn.push('Giá app đang bằng giá quán. Cần lợi nhuận app trên '+pct(minAppMargin*100)+' (hoặc nhập đủ phí sàn + quảng cáo) thì giá app mới cao hơn.');
   box.innerHTML='<div class="price-sim-row">'+
     '<div class="price-sim-card"><h4>Cơ cấu chi phí 1 ly</h4>'+
       line('Giá vốn nguyên liệu',money(m.cost))+
@@ -1333,6 +1334,7 @@ function renderPricingSim(){
     '</div>'+
     '<div class="price-sim-card"><h4>Trên app giao hàng</h4><div class="big">'+(m.app?money(m.app):'—')+'</div>'+
       (p.appMode==='same'?line('Bằng giá tại quán','✓'):(m.app<=m.store?line('Giữ sàn giá quán','✓'):line('Theo lợi nhuận app',money(m.appProfitRaw)+' ✓')))+
+      (appFloored?line('LN app tối thiểu để app &gt; quán',pct(minAppMargin*100)):'')+
       line('Phí sàn + thuế + quảng cáo',pct(feeSum))+
       line('Tiền phí phải trả',money(m.appFees))+
       line('Lợi nhuận thực',pct(m.appMarginPct))+
