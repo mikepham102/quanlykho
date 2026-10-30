@@ -1,0 +1,8 @@
+.DS_Store
+backups/
+node_modules/
+
+# Dữ liệu xuất ra / báo cáo — không commit
+outputs/
+*.xlsx
+*.csv

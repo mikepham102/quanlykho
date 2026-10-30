@@ -35,6 +35,11 @@ drop trigger if exists on_auth_user_created_workspace_profile on auth.users;
 create trigger on_auth_user_created_workspace_profile after insert on auth.users
 for each row execute function public.create_workspace_profile();
 
+-- Backfill accounts that existed before this trigger was installed.
+insert into public.user_profiles(user_id,role)
+select id,'employee' from auth.users
+on conflict (user_id) do nothing;
+
 create or replace function public.load_workspace_state()
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare r text; s jsonb;

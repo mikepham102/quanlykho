@@ -1,0 +1,68 @@
+# PROJECT OVERVIEW — Mộc Inventory
+
+> Cập nhật: 28/10/2026. Tài liệu này mô tả **đúng** hệ thống đang chạy, không phải thiết kế dự kiến.
+
+## 1. Mục tiêu
+
+Ứng dụng quản lý kho cho quán trà sữa, chạy hoàn toàn trên trình duyệt:
+
+- Theo dõi tồn nguyên liệu thô (trà, sữa, bột, topping, bao bì…).
+- Quản lý bán thành phẩm (BTP) nấu theo mẻ, có công thức và hạn dùng.
+- Ghi nghiệp vụ kho hằng ngày: nhập, xuất thô, nấu, đưa BTP ra quầy, thu hồi, hủy, hao hụt.
+- Đối soát với file bán hàng của POS (CSV/XLSX) để biết đã tiêu thụ bao nhiêu theo lý thuyết.
+- Kiểm kê cuối kỳ và xem báo cáo chênh lệch.
+- Gợi ý **giá bán tại quán** và **giá trên app giao đồ ăn** theo chính sách cấu hình được (hao hụt, vận hành, khấu hao, VAT, Food Cost, lợi nhuận mục tiêu, phí sàn).
+- Dùng chung dữ liệu nhiều thiết bị qua Supabase, có phân quyền chủ quán / quản lý / nhân viên.
+- Cài ra màn hình chính và dùng như app điện thoại: không zoom, không kéo tải lại, chữ và nút lớn, 3 mức cỡ chữ.
+
+## 2. Người dùng và vai trò
+
+| Vai trò | Quyền chính |
+|---|---|
+| `owner` (chủ quán) | Toàn quyền: cấu hình mặt hàng, danh mục, công thức, kiểm kê, nhập POS, tài khoản, thương hiệu. |
+| `manager` (quản lý) | Xem dashboard, tồn kho, phiếu kho; tạo/sửa/xóa phiếu vận hành. Không đổi cấu hình và không nhập POS/kiểm kê. |
+| `employee` (nhân viên) | Xem dashboard, tồn kho, phiếu kho; chỉ **tạo** phiếu kho. Không sửa/xóa phiếu đã lưu. |
+
+Quyền được kiểm tra hai lớp: ẩn nút trên giao diện (`applyRolePermissions`) và chặn thật ở RPC `save_workspace_state` phía Supabase.
+
+## 3. Sáu trang chức năng
+
+| Trang | ID | Nội dung |
+|---|---|---|
+| Tổng quan | `page-dashboard` | KPI tồn kho, mặt hàng dưới ngưỡng, hoạt động gần nhất. |
+| Tồn kho | `page-inventory` | Danh sách nguyên liệu/BTP, lịch sử biến động theo mặt hàng, cảnh báo dưới định mức. |
+| Phiếu kho | `page-operations` | Danh sách phiếu theo ngày và loại; sửa/xóa phiếu (trừ nhân viên). |
+| Món & BOM | `page-recipes` | Món POS, size, giá, định lượng nguyên liệu/BTP cho một ly; giá vốn, Food Cost và giá đề xuất tại quán/trên app. |
+| Đối soát | `page-reconcile` | Nhập file POS, so sánh tiêu thụ lý thuyết với thực tế, kiểm kê. |
+| Cài đặt | `page-settings` | Mặt hàng, BTP, danh mục, nhà cung cấp, tài khoản, thương hiệu, **cấu hình giá đề xuất** và panel **Dữ liệu kho** (nhập/xuất/sao lưu JSON, Excel, mẫu trống) chia nhóm mở–đóng. |
+
+## 4. Công nghệ thực tế
+
+- **Frontend:** một file `index.html` duy nhất (~266.000 ký tự, ~172 hàm JavaScript thuần), CSS nhúng trong 14 thẻ `<style>`, không có build step, không framework.
+- **PWA:** `manifest.webmanifest`, `sw.js` (cache shell `moc-inventory-shell-v17`), `icon.svg` + `icon-192.png` + `icon-512.png` + `apple-touch-icon.png`.
+- **Giao diện native:** một khối CSS cuối cùng chứa token cỡ chữ (`--fs-*`), khung cuộn `.main` và khoá hành vi web; 3 mức cỡ chữ lưu ở `localStorage['moc-display-v1']` (xem `ARCHITECTURE.md` mục 9).
+- **Dữ liệu:** Supabase Postgres + Auth, toàn bộ workspace lưu trong **một bản ghi JSONB** (`workspace_state.state`).
+- **Đồng bộ:** RPC `load_workspace_state` / `save_workspace_state`, có kiểm tra `_revision` để tránh ghi đè.
+- **Triển khai:** GitHub Pages qua `.github/workflows/deploy.yml` khi push lên `main`.
+- **Chạy offline / không cấu hình:** nếu `supabase-config.js` trống, app dùng `localStorage` key `moc-inventory-v1` với dữ liệu demo.
+
+### Không tồn tại trong dự án này
+
+React, TypeScript, Express, MongoDB, Jest, `package.json`, `src/`, `server/`, API `/api/settings`. Mọi tài liệu cũ nhắc tới các thành phần này là **sai** và đã được thay thế.
+
+## 5. Quy ước mã hàng (tóm tắt)
+
+Mã sinh tự động theo danh mục, dạng `<PREFIX><3 chữ số>`:
+
+| Danh mục | Prefix | Ví dụ |
+|---|---|---|
+| Trà | `NLTR` | `NLTR001` |
+| Chất lỏng (sữa, syrup, nước, kem) | `NLCL` | `NLCL001` |
+| Bột | `NLBT` | `NLBT001` |
+| Topping / trân châu | `NLTP` | `NLTP001` |
+| Trái cây / mứt / sinh tố | `NLTC` | `NLTC001` |
+| Bao bì | `NLBB` | `NLBB001` |
+| Khác (mặc định) | `NL` | `NL008` |
+| Bán thành phẩm | `BTP` | `BTP003` |
+
+Chi tiết quy tắc xem `BUSINESS_RULES.md`, cách cài đặt xem `ARCHITECTURE.md`.
