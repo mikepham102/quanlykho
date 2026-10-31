@@ -295,7 +295,7 @@ check(
 );
 check(
   'các phiếu kho dùng chung bộ chọn mặt hàng (không còn select thô)',
-  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 3 &&
+  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 2 &&
     !src.includes('<select id="f-item">')
 );
 check(
@@ -376,7 +376,7 @@ check(
 );
 check(
   'phiếu nấu và xuất nguyên liệu được gắn batchId',
-  /batchId:batch\.id/.test(src) && /batchCode:batch\.code/.test(src) && /batch\.ops=batchOpIds\(created\)/.test(src)
+  /batchId:batch\.id/.test(src) && /batchCode:batch\.code/.test(src) && /batch\.ops=\[[^\]]*\]/.test(src)
 );
 check('trang Công thức có bảng mẻ nấu gần đây', /id="batches-table"/.test(src) && /renderBatches\(\)/.test(src) && /id="batch-frequency"/.test(src));
 
@@ -430,6 +430,17 @@ check(
     /class="card-qty">\$\{fmt\(x\.qty\)\}\/\$\{fmt\(x\.min\)\}/.test(src) &&
     /class="card-name">\$\{xEsc\(b\.prepName\|\|''\)\}/.test(src) &&
     /class="card-qty">\$\{fmt\(b\.actualQty\)\}/.test(src)
+);
+
+check(
+  'nấu gộp một nút, kiểm tra tồn quầy trước khi nấu',
+  /function barMap\(/.test(src) && /usageQty:true/.test(src) &&
+    /Quầy \$\{x\.name\} còn/.test(src) &&
+    !src.includes("openModal('prep')") && !src.includes("if(type==='prep')")
+);
+check(
+  'xuất kho thô hiện số đang có ở quầy',
+  /id="bar-hint"/.test(src) && /function updateBarHint\(/.test(src)
 );
 
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
