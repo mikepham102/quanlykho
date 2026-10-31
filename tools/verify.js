@@ -435,7 +435,7 @@ check(
 check(
   'nấu gộp một nút, kiểm tra tồn quầy trước khi nấu',
   /function barMap\(/.test(src) && /usageQty:true/.test(src) &&
-    /Quầy \$\{x\.name\} còn/.test(src) &&
+    /Không đủ tồn kho: cần/.test(src) &&
     !src.includes("openModal('prep')") && !src.includes("if(type==='prep')")
 );
 check(
@@ -479,8 +479,23 @@ check(
   'quy đổi kho↔đơn vị dùng nhất quán, BTP quy về đơn vị kho khi trừ',
   /function usageUnit\(x\)\{return \(Number\(x\?\.conversionQty\)>0&&x\?\.conversionUnit\)/.test(src) &&
     /function usageFactor\(x\)\{let n=Number\(x\?\.conversionQty\);return\(n>0&&x\?\.conversionUnit\)\?n:1\}/.test(src) &&
-    /stockQtyFromUsage\(x,prepNeed\[id\]\)/.test(src) &&
+    /takeBar/.test(src) && /remaining\/f/.test(src) &&
     /let scale=r\.qty\/\(Number\(r\.x\.outputQty\)\|\|1\)/.test(src)
+);
+
+check(
+  'quầy bar hiển thị ở Tồn kho và tính cả BTP xuất ra quầy',
+  /id="bar-panel"/.test(src) && /function renderBarPanel\(/.test(src) && /renderBarPanel\(\);/.test(src) &&
+    /o\.kind==='sale_issue'\).*?return/.test(src) &&
+    /o\.kind==='sale_return'\|\|o\.kind==='sale_waste'/.test(src)
+);
+check(
+  'nấu trừ quầy trước, thiếu lấy kho, chỉ chặn khi tổng thiếu',
+  /takeBar/.test(src) && /Không đủ tồn kho: cần/.test(src) && /remaining\/f/.test(src)
+);
+check(
+  'chốt ca trừ phần BTP đã dùng nấu',
+  /r\.issued-r\.closed-r\.used/.test(src) && /used\[o\.itemId\]/.test(src)
 );
 
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
