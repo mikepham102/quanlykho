@@ -459,6 +459,12 @@ check(
   /function ensureBarUseButton\(/.test(src) && /data-baruse/.test(src) && /ensureBarUseButton\(\);/.test(src)
 );
 
+check(
+  'nấu ghi rõ ô số lượng là sản lượng thành phẩm + 1 mẻ + dòng tính trực tiếp',
+  src.includes('sản lượng thành phẩm thu được') && /id="cook-need"/.test(src) &&
+    /function updateCookNeed\(/.test(src) && /1 mẻ = /.test(src) && /flow-entry-batch/.test(src)
+);
+
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
 check(
   'kiểm kê có chế độ lưu nháp (không đổi tồn)',
