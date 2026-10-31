@@ -405,6 +405,17 @@ check(
 );
 check('phiếu vị trí cũ vẫn được tính vào chênh lệch (dữ liệu cũ)', /o\.kind==='issue_location'\)outNet\+=q/.test(src) && /o\.kind==='return_location'\)outNet-=q/.test(src));
 
+check(
+  'mobile: bảng chuyển thành thẻ, ẩn table-wrap',
+  /#batches-table-wrap,#stocktakes-table-wrap,#imports-table-wrap,#variance-table-wrap,#compare-table-wrap,#expiring-table-wrap,#low-table-wrap\{display:none\}/.test(src)
+);
+check(
+  'mobile: có danh sách thẻ cho tồn thấp, nhập POS, chênh lệch, so sánh',
+  ['low-mobile-list','imports-mobile-list','variance-mobile-list','compare-mobile-list','expiring-mobile-list']
+    .every(id => src.includes('id="' + id + '"')) &&
+    src.includes('imports-mobile-list') && src.includes('variance-mobile-list') && src.includes('compare-mobile-list')
+);
+
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
 check(
   'kiểm kê có chế độ lưu nháp (không đổi tồn)',

@@ -1,4 +1,4 @@
-const CACHE = 'moc-inventory-shell-v36';
+const CACHE = 'moc-inventory-shell-v37';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './supabase-config.js'];
 const BRAND_MANIFEST_KEY = new URL('__brand_manifest__.json', self.registration.scope);
 
