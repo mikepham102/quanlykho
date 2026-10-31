@@ -774,8 +774,8 @@ function barMap(){
 function barQty(itemId){let v=barMap()[itemId]||0;return v>0?v:0}
 function barAuditRows(){
   let m=barMap(),rows=[];
-  db.items.forEach(x=>{let have=m[x.id]||0;if(have>0.00001)rows.push({x,have})});
-  return rows.sort((a,b)=>a.x.name.localeCompare(b.x.name,'vi'))
+  db.items.forEach(x=>{let have=m[x.id]||0;if(have>0.00001||x.locId)rows.push({x,have})});
+  return rows.sort((a,b)=>(b.have>0?1:0)-(a.have>0?1:0)||a.x.name.localeCompare(b.x.name,'vi'))
 }
 function supplierUsageMap(){let m={};(db.ops||[]).forEach(o=>{if(o.kind==='stockin'&&o.ref)m[o.ref]=(m[o.ref]||0)+1});return m}
 function sortedSuppliers(){let m=supplierUsageMap();return sortByUsage(db.suppliers||[],n=>m[n]||0,n=>n)}
