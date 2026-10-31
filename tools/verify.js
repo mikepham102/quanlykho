@@ -465,6 +465,24 @@ check(
     /function updateCookNeed\(/.test(src) && /1 mẻ = /.test(src) && /flow-entry-batch/.test(src)
 );
 
+check(
+  'đã đổi tên Xuất ngoài kinh doanh',
+  !src.includes('Dùng tại quầy') && src.includes("baruse:'Xuất ngoài kinh doanh'") &&
+    /Xuất ngoài kinh doanh<\/span>/.test(src)
+);
+check(
+  'ô số lượng đơn lẻ hiện đơn vị kho',
+  /data-qty-unit/.test(src) && /function updateQtyUnitLabel\(/.test(src) &&
+    /onchange="updateQtyUnitLabel\(\);updateBarHint\(\)"/.test(src)
+);
+check(
+  'quy đổi kho↔đơn vị dùng nhất quán, BTP quy về đơn vị kho khi trừ',
+  /function usageUnit\(x\)\{return \(Number\(x\?\.conversionQty\)>0&&x\?\.conversionUnit\)/.test(src) &&
+    /function usageFactor\(x\)\{let n=Number\(x\?\.conversionQty\);return\(n>0&&x\?\.conversionUnit\)\?n:1\}/.test(src) &&
+    /stockQtyFromUsage\(x,prepNeed\[id\]\)/.test(src) &&
+    /let scale=r\.qty\/\(Number\(r\.x\.outputQty\)\|\|1\)/.test(src)
+);
+
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
 check(
   'kiểm kê có chế độ lưu nháp (không đổi tồn)',
