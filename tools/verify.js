@@ -295,12 +295,12 @@ check(
 );
 check(
   'các phiếu kho dùng chung bộ chọn mặt hàng (không còn select thô)',
-  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 4 &&
+  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 3 &&
     !src.includes('<select id="f-item">')
 );
 check(
   'xuất đầu ca / nấu thành phẩm / xuất bán dùng bộ chọn flow',
-  (src.match(/mode:'flow-/g) || []).length === 4 && !src.includes('addFlowLine') && !src.includes('flow-raw-search')
+  (src.match(/mode:'flow-/g) || []).length === 5 && !src.includes('addFlowLine') && !src.includes('flow-raw-search')
 );
 check(
   'chốt ca chỉ liệt kê món đã xuất ra quầy trong ngày',
@@ -379,6 +379,14 @@ check(
   /batchId:batch\.id/.test(src) && /batchCode:batch\.code/.test(src) && /batch\.ops=batchOpIds\(created\)/.test(src)
 );
 check('trang Công thức có bảng mẻ nấu gần đây', /id="batches-table"/.test(src) && /renderBatches\(\)/.test(src) && /id="batch-frequency"/.test(src));
+
+check(
+  'phiếu nhập kho dùng thẻ dòng hàng như Xuất đầu ca, không có NCC/đơn giá',
+  /if\(type==='stockin'\)body=`<div class="flow-section-head">/.test(src) &&
+    src.includes("id=\"flow-stockin-lines\"") &&
+    !src.includes('f-supplier') && !/if\(type==='stockin'\)body=[\s\S]{0,900}Đơn giá/.test(src) &&
+    /document\.querySelectorAll\('\.flow-stockin'\)/.test(src)
+);
 
 // 10. Vị trí trữ hàng (chỉ ghi trên phiếu xuất thô) -------------------------
 check(
