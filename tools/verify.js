@@ -424,6 +424,14 @@ check(
     src.includes('imports-mobile-list') && src.includes('variance-mobile-list') && src.includes('compare-mobile-list')
 );
 
+check(
+  'thẻ sắp hết/hết hạn gọn: tên thay phân loại, số lượng bên phải, bỏ đơn vị',
+  /class="card-name">\$\{xEsc\(x\.name\)\}/.test(src) &&
+    /class="card-qty">\$\{fmt\(x\.qty\)\}\/\$\{fmt\(x\.min\)\}/.test(src) &&
+    /class="card-name">\$\{xEsc\(b\.prepName\|\|''\)\}/.test(src) &&
+    /class="card-qty">\$\{fmt\(b\.actualQty\)\}/.test(src)
+);
+
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
 check(
   'kiểm kê có chế độ lưu nháp (không đổi tồn)',
