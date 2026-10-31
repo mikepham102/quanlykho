@@ -295,7 +295,7 @@ check(
 );
 check(
   'các phiếu kho dùng chung bộ chọn mặt hàng (không còn select thô)',
-  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 2 &&
+  (src.match(/itemPickerHtml\(\{selectId:'f-item'/g) || []).length === 3 &&
     !src.includes('<select id="f-item">')
 );
 check(
@@ -325,7 +325,7 @@ check('manifest có id ổn định', typeof manifest.id === 'string' && manifes
 check('loại phiếu điều chỉnh kiểm kê (adjust)', /kind:'adjust'/.test(src) && /adjust\[o\.itemId\]/.test(src));
 check(
   'kiểm kê tạo phiếu điều chỉnh thay vì ghi đè tồn',
-  /stocktakeId/.test(src) && /if\(!ids\.length\)/.test(src) && /kind:'adjust'/.test(src) && /Ô để trống = <b>chưa đếm<\/b>/.test(src)
+  /stocktakeId/.test(src) && /if\(!ids\.length&&!barIds\.length\)/.test(src) && /kind:'adjust'/.test(src) && /Ô để trống = <b>chưa đếm<\/b>/.test(src)
 );
 check(
   'phiếu bị vô hiệu hoá vẫn nằm trong lịch sử',
@@ -441,6 +441,22 @@ check(
 check(
   'xuất kho thô hiện số đang có ở quầy',
   /id="bar-hint"/.test(src) && /function updateBarHint\(/.test(src)
+);
+
+check(
+  'kiểm kê có phần đếm quầy (gram) và lưu barCounts',
+  /class="bar-count"/.test(src) && /barCounts/.test(src) && /barSystem/.test(src) &&
+    /kind:'bar_adjust'/.test(src) && /kind==='bar_adjust'/.test(src)
+);
+check(
+  'có nút Dùng tại quầy ở Tồn kho và form ghi use_location usageQty',
+  /openModal\(\\'baruse\\'\)/.test(src) && /if\(type==='baruse'\)body=/.test(src) &&
+    /kind:'use_location'[^}]*usageQty:true/.test(src)
+);
+
+check(
+  'nút Dùng tại quầy chỉ ở Tồn kho (dashboard vẫn 4 nút)',
+  /function ensureBarUseButton\(/.test(src) && /data-baruse/.test(src) && /ensureBarUseButton\(\);/.test(src)
 );
 
 // 11. Kiểm kê nháp + nhật ký thay đổi --------------------------------------
